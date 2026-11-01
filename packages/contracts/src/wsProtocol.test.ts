@@ -50,6 +50,7 @@ import {
 	REVIEW_ACTIONS_PROTOCOL_VERSION,
 	REVIEW_RICH_ANCHORS_PROTOCOL_VERSION,
 	readToolResponseMessage,
+	SEARCH_PROTOCOL_VERSION,
 	SESSION_RENAME_PROTOCOL_VERSION,
 	SESSION_STATE_PROTOCOL_VERSION,
 	SESSION_TITLE_MAX_LENGTH,
@@ -242,7 +243,7 @@ test("tool responses replace the ask-only answer method at v93", () => {
 
 test("user-selectable fonts are pinned to v102", () => {
 	expect(FONTS_PROTOCOL_VERSION).toBe(102);
-	expect(PROTOCOL_VERSION).toBe(102);
+	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(FONTS_PROTOCOL_VERSION);
 	expect(WS_METHODS.fontsList).toBe("fonts.list");
 	expect(WS_METHODS.fontsInstalled).toBe("fonts.installed");
 	expect(WS_METHODS.fontsReveal).toBe("fonts.reveal");
@@ -268,6 +269,13 @@ test("client error reports are pinned to v90", () => {
 	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(CLIENT_ERROR_REPORT_PROTOCOL_VERSION);
 	expect(CLIENT_ERROR_REPORT_PROTOCOL_VERSION).toBe(90);
 	expect(WS_METHODS.clientReportError).toBe("client.reportError");
+});
+
+test("host search and its previews are pinned to v103", () => {
+	expect(PROTOCOL_VERSION).toBe(103);
+	expect(SEARCH_PROTOCOL_VERSION).toBe(103);
+	expect(WS_METHODS.searchQuery).toBe("search.query");
+	expect(WS_METHODS.searchPreview).toBe("search.preview");
 });
 
 test("project rename is pinned to v85", () => {

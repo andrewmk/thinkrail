@@ -64,6 +64,11 @@ import type {
 	ReviewCommentStatus,
 	ReviewFixDetails,
 	ReviewSnapshot,
+	SearchContext,
+	SearchKind,
+	SearchPreviewResult,
+	SearchPreviewTarget,
+	SearchQueryResult,
 	SessionResources,
 	SessionStateRecord,
 	SpecGraphSnapshot,
@@ -135,7 +140,8 @@ export type TemplateReadLocation =
 	| { projectId: string; workspaceId?: never }
 	| { workspaceId?: never; projectId?: never };
 
-export const PROTOCOL_VERSION = 102;
+export const PROTOCOL_VERSION = 103;
+export const SEARCH_PROTOCOL_VERSION = 103;
 export const FONTS_PROTOCOL_VERSION = 102;
 export const CUSTOM_ENDPOINTS_PROTOCOL_VERSION = 101;
 export const PI_PACKAGES_PROTOCOL_VERSION = 100;
@@ -382,6 +388,8 @@ export const WS_METHODS = {
 	feedbackSurveySubmit: "feedback.survey.submit",
 	clientReportError: "client.reportError",
 	historySearch: "history.search",
+	searchQuery: "search.query",
+	searchPreview: "search.preview",
 	reviewGet: "review.get",
 	reviewCommentAdd: "review.commentAdd",
 	reviewCommentUpdate: "review.commentUpdate",
@@ -839,7 +847,7 @@ export interface WsMethodMap {
 	};
 	"fs.readDir": { params: { workspaceId: string; path: string }; result: FileNode[] };
 	"fs.readFile": {
-		params: { workspaceId: string; path: string };
+		params: { workspaceId: string; path: string; maxBytes?: number };
 		result: { content: string; meta: ResourceMeta };
 	};
 	"spec.graph": { params: { workspaceId: string }; result: SpecGraphSnapshot };
@@ -1117,6 +1125,17 @@ export interface WsMethodMap {
 		params: { query: string; scope: HistoryScope; limit?: number };
 		result: HistorySearchResult;
 	};
+	"search.query": {
+		params: {
+			seq: number;
+			query: string;
+			kinds?: SearchKind[];
+			context: SearchContext;
+			limit?: number;
+		};
+		result: SearchQueryResult;
+	};
+	"search.preview": { params: SearchPreviewTarget; result: SearchPreviewResult };
 	"review.get": { params: { workspaceId: string }; result: ReviewSnapshot };
 	"review.commentAdd": {
 		params: {
@@ -1294,7 +1313,8 @@ export type WsErrorCode =
 	| "PACKAGE_SETTINGS_WRITE_FAILED"
 	| "REQUEST_REPLAY_OVERFLOW"
 	| "INSTALLED_FONTS_UNAVAILABLE"
-	| "GIT_TIMEOUT";
+	| "GIT_TIMEOUT"
+	| "FILE_TOO_LARGE";
 
 export interface WsResponse {
 	id: string;
