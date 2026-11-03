@@ -23,7 +23,6 @@ export {
 	runHostUpdate,
 	supportsChangeMutations,
 	supportsFonts,
-	supportsHostSearch,
 	supportsHostUpdateRun,
 	supportsPiPackages,
 	supportsPlanReview,
