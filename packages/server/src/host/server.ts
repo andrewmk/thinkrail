@@ -20,6 +20,7 @@ import {
 	PROTOCOL_VERSION,
 	USER_FONTS_ROUTE,
 	USER_THEMES_PROTOCOL_VERSION,
+	WORKSPACE_CREATION_PROTOCOL_VERSION,
 	WS_CHANNELS,
 } from "@thinkrail/contracts";
 import { errorCodeOf } from "@thinkrail/shared/codedError";
@@ -134,16 +135,25 @@ import {
 } from "../watch";
 import {
 	getWorkspace,
+	interruptWorkspaceCreations,
 	listAllWorkspaceRecords,
 	recordWorkspaceHead,
 	refreshUserOwnedWorkspace,
 	seedWorkspaceHead,
+	setWorkspaceCreationHandoff,
+	setWorkspaceCreationPublisher,
 	setWorkspacePublisher,
+	stopWorkspaceCreations,
 } from "../workspaces";
 import { BLOB_PREFIX, FILES_PREFIX, serveBlob, serveWorktreeFile } from "./fileRoutes";
 import { serveUserFonts } from "./fontRoutes";
 import { setFsNudgePublisher } from "./fsNudge";
-import { handleRequest, requestErrorReport, requestMethodDiagnostic } from "./handlers";
+import {
+	handleRequest,
+	requestErrorReport,
+	requestMethodDiagnostic,
+	workspaceCreationHandoff,
+} from "./handlers";
 import { provisionInitialTerminal } from "./initialTerminal";
 import { trackLoginOutcome } from "./loginAnalytics";
 import {
@@ -401,6 +411,10 @@ export async function createServer(options: CreateServerOptions = {}): Promise<R
 				ws.subscribe(WS_CHANNELS.workspaceUpdated);
 				ws.subscribe(WS_CHANNELS.workspaceRemoved);
 				ws.subscribe(WS_CHANNELS.workspaceFsChanged);
+				if (ws.data.protocolVersion >= WORKSPACE_CREATION_PROTOCOL_VERSION) {
+					ws.subscribe(WS_CHANNELS.workspaceCreationChanged);
+					ws.subscribe(WS_CHANNELS.workspaceCreationRemoved);
+				}
 				ws.subscribe(WS_CHANNELS.settingsChanged);
 				if (hostUpdate) ws.subscribe(WS_CHANNELS.hostUpdateAvailable);
 				ws.subscribe(WS_CHANNELS.reviewChanged);
@@ -716,6 +730,17 @@ export async function createServer(options: CreateServerOptions = {}): Promise<R
 		);
 	});
 
+	interruptWorkspaceCreations();
+	setWorkspaceCreationHandoff(workspaceCreationHandoff);
+	setWorkspaceCreationPublisher((event) => {
+		const channel =
+			event.kind === "changed"
+				? WS_CHANNELS.workspaceCreationChanged
+				: WS_CHANNELS.workspaceCreationRemoved;
+		const data = event.kind === "changed" ? event.creation : event.removed;
+		server.publish(channel, JSON.stringify({ channel, data }));
+	});
+
 	setWorkspacePublisher((event) => {
 		const channel =
 			event.kind === "created"
@@ -1014,7 +1039,11 @@ export async function createServer(options: CreateServerOptions = {}): Promise<R
 	const shutdown = (): Promise<void> => {
 		shutdownPromise ??= (async () => {
 			stopHostUpdateChecks();
-			await Promise.allSettled([settleSessionsForShutdown(), shutdownAnalytics()]);
+			await Promise.allSettled([
+				settleSessionsForShutdown(),
+				shutdownAnalytics(),
+				stopWorkspaceCreations(),
+			]);
 			await turnTracker.drain();
 			stop();
 		})();
@@ -1058,6 +1087,8 @@ function restoreSeamDefaults(): void {
 	setProjectPublisher(null);
 	setTerminalTabsPublisher(() => {});
 	setWorkspacePublisher(null);
+	setWorkspaceCreationPublisher(null);
+	setWorkspaceCreationHandoff(null);
 	setPiPackagesPublisher(null);
 	setWatchPublisher(null);
 	setSkillPathClassifier(null);
