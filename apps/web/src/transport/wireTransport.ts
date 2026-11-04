@@ -248,21 +248,20 @@ function refreshLoadedWorkspaceLists(connectionGeneration: number): void {
 async function loadWorkspaceCreations(connectionGeneration: number): Promise<void> {
 	const creations = await getTransport().request("workspace.listCreations", {});
 	const before = useAppStore.getState();
+	if (!isConnectedGeneration(before, connectionGeneration)) return;
 	const watched = before.activeCreationId
 		? before.workspaceCreations[before.activeCreationId]
 		: undefined;
-	if (watched && !creations.some((creation) => creation.id === watched.id)) {
-		const rows = await getTransport().request("workspace.list", {
-			projectId: watched.projectId,
-			includeDiffStats: false,
-		});
-		const current = useAppStore.getState();
-		if (!isConnectedGeneration(current, connectionGeneration)) return;
-		current.setWorkspaces(watched.projectId, rows);
-	}
+	before.setWorkspaceCreations(creations);
+	if (!watched || creations.some((creation) => creation.id === watched.id)) return;
+	const rows = await getTransport().request("workspace.list", {
+		projectId: watched.projectId,
+		includeDiffStats: false,
+	});
 	const current = useAppStore.getState();
 	if (!isConnectedGeneration(current, connectionGeneration)) return;
-	current.setWorkspaceCreations(creations);
+	current.setWorkspaces(watched.projectId, rows);
+	current.landOnFinishedCreation(watched.projectId, watched.id);
 }
 
 function refreshWorkspaceCreations(connectionGeneration: number): void {
