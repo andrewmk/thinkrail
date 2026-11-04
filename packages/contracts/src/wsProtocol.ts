@@ -237,7 +237,7 @@ export interface WorkspaceCreation {
 	state: WorkspaceCreationState;
 	phase: WorkspaceCreationPhase;
 	progress?: { done: number; total: number };
-	failure?: { message: string; code?: string };
+	failure?: { message: string; code?: string; cleanedUp?: true };
 	kickoff?: { text: string; imageCount: number };
 	startedAt: number;
 }
