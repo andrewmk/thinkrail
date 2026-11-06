@@ -29,6 +29,7 @@ import {
 	writeNativeLabels,
 } from "./nativeLabels";
 import { createPageZoomGestureHandler, nextPageZoom } from "./pageZoom";
+import { PageZoomStore } from "./pageZoomStore";
 import {
 	injectInitialDesktopPreferences,
 	readDesktopPreferenceRemove,
@@ -317,6 +318,8 @@ async function start(): Promise<void> {
 	const preferences = new PreferenceStore(join(userData, "preferences.json"));
 	const initialRoute = routes.read(BACKEND_PROFILE_ID, WINDOW_ID);
 	const initialPreferences = preferences.read(BACKEND_PROFILE_ID, WINDOW_ID);
+	const pageZooms = new PageZoomStore(join(userData, "page-zoom.json"));
+	const initialPageZoom = pageZooms.read(BACKEND_PROFILE_ID, WINDOW_ID);
 	const titleBarProbePath = neutral
 		? undefined
 		: process.env.THINKRAIL_DESKTOP_TITLE_BAR_PROBE_FILE;
@@ -339,9 +342,13 @@ async function start(): Promise<void> {
 		writeReady(windowControlsProbePath, windowControlsProbe);
 	};
 	let mainWindow: BrowserWindow;
+	const applyPageZoom = (zoom: number): void => {
+		mainWindow.setPageZoom(zoom);
+		if (!neutral) pageZooms.write(BACKEND_PROFILE_ID, WINDOW_ID, zoom);
+	};
 	const handlePageZoomGesture = createPageZoomGestureHandler({
 		getPageZoom: () => mainWindow.getPageZoom(),
-		setPageZoom: (zoom) => mainWindow.setPageZoom(zoom),
+		setPageZoom: applyPageZoom,
 	});
 	let handleTitleBarDoubleClick: () => Promise<void> = async () => {};
 	const rpc = BrowserView.defineRPC<DesktopRpc>({
@@ -400,7 +407,7 @@ async function start(): Promise<void> {
 					void handleTitleBarDoubleClick();
 				},
 				pageZoomRequested: ({ action }) => {
-					mainWindow.setPageZoom(nextPageZoom(mainWindow.getPageZoom(), action));
+					applyPageZoom(nextPageZoom(mainWindow.getPageZoom(), action));
 				},
 				pageZoomGestureRequested: handlePageZoomGesture,
 				menuLabelsChanged: ({ labels }) => {
@@ -463,6 +470,8 @@ async function start(): Promise<void> {
 						: {}),
 				}),
 	});
+	mainWindow.setPageZoom(initialPageZoom);
+	if (!neutral) mainWindow.maximize();
 	setWindowsWindowIcon(mainWindow);
 	if (!neutral) {
 		mainWindow.webview.setNavigationRules(windowNavigationRules(origin));

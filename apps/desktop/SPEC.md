@@ -76,7 +76,8 @@ another.
    - Closing the splash before the main window exists quits ThinkRail. Closing the main window before
      it is ready also closes the splash, so the last window still goes and quit runs through the
      coordinator. A splash the user closed natively is never closed again.
-   - The main window, RPC, navigation rules and first-`dom-ready` readiness are unchanged. Creating the
+   - The main window, RPC, navigation rules and first-`dom-ready` readiness are unchanged; it starts
+     maximized (the `1440×920` frame remains the restored size), neutral mode excepted. Creating the
      main window early on a splash page was rejected: it would move origin-dependent navigation, readiness
      and host-bound RPC ahead of host boot.
 3. Start `resolveShellEnv()` right after the `chdir`, so the login shell it spawns also starts outside the
@@ -226,6 +227,12 @@ On macOS, WebKit's two-finger pinch lifecycle drives that same native page zoom 
 yields gestures claimed by page content and forwards validated scales; the main process captures native zoom
 at gesture start and applies each absolute scale against that baseline, bounded to 50%–200%, so updates never
 compound or introduce a second zoom owner. The web app owns no duplicate shortcut, gesture, or zoom state.
+
+The resulting zoom is the window's persistent state: both paths funnel through one main-process apply that
+persists the level per backend/window in `page-zoom.json` (`PageZoomStore`, the `RouteStore` document
+shape, garbage falls back to `1`), and the main window applies the stored level
+immediately on creation, before the page renders — so a high-DPI display whose webview reports a 1× device
+pixel ratio (e.g. WSLg) keeps the user's chosen scale across launches. Neutral mode reads but never writes.
 
 ## Native window chrome
 
