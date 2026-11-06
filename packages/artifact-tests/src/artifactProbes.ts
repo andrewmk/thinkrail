@@ -500,7 +500,6 @@ export default function syntheticExternalExtension(pi) {
 		PI_OFFLINE: "1",
 		...toolHomeEnv(homeDir),
 		PATH: noPiPath,
-		THINKRAIL_NO_ANALYTICS: "1",
 		CI: "1",
 	};
 	let defaultHost: RunningArtifactHost | undefined;

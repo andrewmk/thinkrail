@@ -15,16 +15,14 @@ import { Button } from "@thinkrail/ui/button";
 import { cn } from "@thinkrail/ui/utils";
 import { type ReactNode, useEffect, useEffectEvent, useState } from "react";
 import { PRODUCT_NAME } from "@/constants/branding";
-import { selectAnalyticsConsentPromptOpen, useAppStore } from "@/store";
+import { useAppStore } from "@/store";
 import { getTransport } from "@/transport";
-import { AnalyticsConsentChoice } from "./AnalyticsPreferences";
 import { ConnectedLine, type ConnectedSummary } from "./ConnectedLine";
 import { ConnectProviderOptions, connectedProviderName } from "./ConnectProviderOptions";
 import { detectAccounts } from "./detectAccounts";
-import { useConsentDraft } from "./useAnalyticsConsent";
 import { cancelUnownedLogin, type ProviderAuth, useProviderAuth } from "./useProviderAuth";
 
-type Step = "intro" | "privacy" | "connect";
+type Step = "intro" | "connect";
 
 const FADE_OUT_MS = 200;
 
@@ -63,7 +61,6 @@ export function OnboardingWizard({
 	const [provider, setProvider] = useState<ProviderStatus | null>(null);
 	const [connected, setConnected] = useState<ConnectedSummary | null>(null);
 	const [done, setDone] = useState(false);
-	const consentOpen = useAppStore(selectAnalyticsConsentPromptOpen);
 	const [detected, setDetected] = useState<DetectedAccount[] | null>(null);
 	const settingsOpen = useAppStore((s) => s.settingsOpen);
 	const auth = useProviderAuth({ ownsLoginDialog: !settingsOpen && step === "connect" });
@@ -82,12 +79,10 @@ export function OnboardingWizard({
 			{step === "intro" ? (
 				<IntroStep
 					onStart={() => {
-						setStep(consentOpen ? "privacy" : "connect");
+						setStep("connect");
 						void detectAccounts().then(setDetected);
 					}}
 				/>
-			) : step === "privacy" ? (
-				<PrivacyStep onContinue={() => setStep("connect")} />
 			) : done && connected ? (
 				<DoneStep connected={connected} projectCards={projectCards} />
 			) : (
@@ -231,45 +226,6 @@ function ConnectStep({
 				) : null}
 			</div>
 			<SkipButton onSkip={onSkip} />
-		</div>
-	);
-}
-
-function PrivacyStep({ onContinue }: { onContinue: () => void }) {
-	const t = useT();
-	const { draft, toggle, pending, error, confirm } = useConsentDraft();
-
-	return (
-		<div
-			data-testid="onboarding-privacy"
-			className="flex w-full max-w-[480px] flex-col items-center gap-24"
-		>
-			<div className="flex flex-col items-center gap-8 text-center">
-				<h1 data-testid="welcome-title" className="tr-heading-xl text-primary">
-					{t("panels.analyticsConsent.title")}
-				</h1>
-				<p className="tr-text-reading text-text-muted">{t("panels.analyticsConsent.subtitle")}</p>
-			</div>
-			<AnalyticsConsentChoice enabled={draft} disabled={pending} onChange={toggle} />
-			{error ? (
-				<p role="alert" className="tr-text-metadata text-feedback-error">
-					{error}
-				</p>
-			) : null}
-			<Button
-				variant="primary"
-				size="l"
-				iconRight={ArrowRight}
-				data-testid="onboarding-privacy-continue"
-				disabled={pending}
-				onClick={() => {
-					void confirm().then((saved) => {
-						if (saved) onContinue();
-					});
-				}}
-			>
-				{t("common.continue")}
-			</Button>
 		</div>
 	);
 }

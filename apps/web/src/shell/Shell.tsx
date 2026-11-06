@@ -16,11 +16,8 @@ import {
 } from "../fonts";
 import { platformShortcutLabel } from "../lib";
 import { NotificationPermissionPrompt, useAttentionNotifications } from "../notifications";
-import { AnalyticsConsentDialog } from "../panels/AnalyticsConsentDialog";
 import { NewWorkspaceDialog } from "../panels/NewWorkspaceDialog";
 import { SettingsDialog } from "../panels/SettingsDialog";
-import { SurveyInvitationDialog } from "../panels/SurveyInvitationDialog";
-import { SurveyWindow } from "../panels/SurveyWindow";
 import { Toaster } from "../panels/Toaster";
 import { useBranchStatus } from "../panels/useBranchStatus";
 import { useCreationChatHandoff, WorkspaceCreationView } from "../panels/WorkspaceCreation";
@@ -28,9 +25,7 @@ import { SearchSettings } from "../search";
 import {
 	SettingsSection,
 	selectActiveWorkspace,
-	selectAnalyticsConsentPromptOpen,
 	selectContextProject,
-	selectOnboardingActive,
 	useAppStore,
 } from "../store";
 import {
@@ -83,8 +78,6 @@ export function Shell() {
 	useLocalLayoutState();
 	useAttentionNotifications();
 	const status = useAppStore((s) => s.status);
-	const analyticsConsentOpen = useAppStore(selectAnalyticsConsentPromptOpen);
-	const onboardingActive = useAppStore(selectOnboardingActive);
 	const StatusDot = status === "connected" ? RiCircleFill : Circle;
 	const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
 	const activeWorkspace = useAppStore(selectActiveWorkspace);
@@ -298,12 +291,6 @@ export function Shell() {
 					{...(activeCreation ? { main: <WorkspaceCreationView creation={activeCreation} /> } : {})}
 				/>
 			)}
-			{onboardingActive ? null : analyticsConsentOpen ? (
-				<AnalyticsConsentDialog />
-			) : (
-				<SurveyInvitationDialog />
-			)}
-			<SurveyWindow />
 			<SearchPaletteHost
 				onNewWorkspace={setNewWorkspaceProjectId}
 				onToggleProjectsHome={homeProjects.toggle}

@@ -1,7 +1,6 @@
 import type {
 	AppConfig,
 	AppConfigUpdate,
-	AppSurvey,
 	BackgroundCommandCompletionDetails,
 	BackgroundCommandOutputResult,
 	BranchList,
@@ -69,8 +68,6 @@ import type {
 	SpecGraphSnapshot,
 	SubagentCompletionDetails,
 	SubagentOverride,
-	SurveyInvitationResponse,
-	SurveySubmitParams,
 	Template,
 	TemplateInfo,
 	TemplateScope,
@@ -139,12 +136,10 @@ export const PROTOCOL_VERSION = 105;
 export const WORKSPACE_CREATION_PROTOCOL_VERSION = 104;
 export const EXTENSION_SETTINGS_PROTOCOL_VERSION = 105;
 export const ASK_DISCUSS_PROTOCOL_VERSION = 105;
-export const GITHUB_STAR_PROTOCOL_VERSION = 103;
 export const FONTS_PROTOCOL_VERSION = 102;
 export const CUSTOM_ENDPOINTS_PROTOCOL_VERSION = 101;
 export const PI_PACKAGES_PROTOCOL_VERSION = 100;
 export const PROVIDER_WARNINGS_PROTOCOL_VERSION = 99;
-export const SURVEY_TRANSLATIONS_PROTOCOL_VERSION = 98;
 export const RESOURCE_HISTORY_PROTOCOL_VERSION = 96;
 export const PROJECT_CLONE_PROTOCOL_VERSION = 95;
 export const ONBOARDING_PROTOCOL_VERSION = 94;
@@ -152,7 +147,6 @@ export const LAYOUT_PLAN_PRESET_PROTOCOL_VERSION = 94;
 export const TOOL_RESPONSE_PROTOCOL_VERSION = 93;
 export const USER_THEMES_PROTOCOL_VERSION = 92;
 export const HOST_ENVIRONMENT_PROTOCOL_VERSION = 91;
-export const CLIENT_ERROR_REPORT_PROTOCOL_VERSION = 90;
 export const LOCALES_PROTOCOL_VERSION = 89;
 export const REVIEW_ACTIONS_PROTOCOL_VERSION = 88;
 export const BRANCH_STATUS_PROTOCOL_VERSION = 87;
@@ -177,7 +171,6 @@ export const PLAN_REVIEW_SUBAGENT_PROTOCOL_VERSION = 67;
 export const AGENT_REVIEW_SETTING_PROTOCOL_VERSION = 68;
 export const PLAN_SUMMARY_GENERATION_PROTOCOL_VERSION = 69;
 export const SESSION_STATE_PROTOCOL_VERSION = 73;
-export const ANALYTICS_CONSENT_PROTOCOL_VERSION = 65;
 export const SESSION_RENAME_PROTOCOL_VERSION = 66;
 export const SESSION_TITLE_MAX_LENGTH = 80;
 
@@ -193,7 +186,6 @@ export const THEME_SYSTEM_PROTOCOL_VERSION = 58;
 export const SUBAGENT_SETTINGS_PROTOCOL_VERSION = 57;
 export const JBCENTRAL_QUOTA_PROTOCOL_VERSION = 59;
 export const WORKSPACE_RENAME_PROTOCOL_VERSION = 55;
-export const FEEDBACK_SURVEY_PROTOCOL_VERSION = 97;
 
 export type HostPlatform = "darwin" | "linux" | "win32";
 
@@ -417,10 +409,7 @@ export const WS_METHODS = {
 	settingsUpdate: "settings.update",
 	environmentGet: "environment.get",
 	environmentUpdate: "environment.update",
-	feedbackRespond: "feedback.respond",
-	feedbackSurvey: "feedback.survey",
-	feedbackSurveySubmit: "feedback.survey.submit",
-	clientReportError: "client.reportError",
+
 	historySearch: "history.search",
 	reviewGet: "review.get",
 	reviewCommentAdd: "review.commentAdd",
@@ -474,8 +463,6 @@ export const WS_CHANNELS = {
 	workspaceCreationRemoved: "workspace.creationRemoved",
 	settingsChanged: "settings.changed",
 	hostUpdateAvailable: "host.updateAvailable",
-	feedbackInterview: "feedback.interview",
-	feedbackGithubStar: "feedback.githubStar",
 	reviewChanged: "review.changed",
 	reviewFailed: "review.failed",
 	turnChanged: "turn.changed",
@@ -614,16 +601,6 @@ export function customMessageText(content: WireCustomMessage["content"]): string
 		.filter((c): c is Extract<typeof c, { type: "text" }> => c.type === "text")
 		.map((c) => c.text)
 		.join("");
-}
-
-export type ClientErrorKind = "render" | "window" | "rejection";
-
-export interface ClientErrorReport {
-	kind: ClientErrorKind;
-	type: string;
-	stack?: string;
-	boundary?: string;
-	chunkIds?: Record<string, string>;
 }
 
 export interface Ack {
@@ -1159,13 +1136,6 @@ export interface WsMethodMap {
 		params: { environment: HostEnvironment };
 		result: HostEnvironmentUpdateResult;
 	};
-	"feedback.respond": { params: { action: SurveyInvitationResponse }; result: Ack };
-	"feedback.survey": {
-		params: { language?: string };
-		result: { survey: AppSurvey | null };
-	};
-	"feedback.survey.submit": { params: SurveySubmitParams; result: Ack };
-	"client.reportError": { params: ClientErrorReport; result: Ack };
 	"history.search": {
 		params: { query: string; scope: HistoryScope; limit?: number };
 		result: HistorySearchResult;

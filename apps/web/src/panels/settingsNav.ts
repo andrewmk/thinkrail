@@ -14,7 +14,6 @@ import {
 	RiPaletteLine,
 	RiPlugLine,
 	RiPuzzle2Line,
-	RiShieldCheckLine,
 	RiTerminalBoxLine,
 	RiTranslate2,
 } from "@remixicon/react";
@@ -105,7 +104,6 @@ const NAV_GROUPS: SettingsNavGroup[] = [
 				label: "settings.nav.notifications",
 				icon: RiNotification3Line,
 			},
-			{ id: SettingsSection.Privacy, label: "settings.nav.privacy", icon: RiShieldCheckLine },
 			{
 				id: SettingsSection.Updates,
 				label: "settings.nav.updates",
@@ -153,7 +151,7 @@ export function resolveSettingsSection(
 	groups: SettingsNavGroup[],
 ): SettingsSection {
 	const available = groups.flatMap((g) => g.sections);
-	if (section === SettingsSection.Feedback || available.some((s) => s.id === section)) {
+	if (available.some((s) => s.id === section)) {
 		return section;
 	}
 	if (available.some((s) => s.id === SettingsSection.Appearance)) {

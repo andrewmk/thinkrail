@@ -138,7 +138,7 @@ const FONTS_HEADER = (version: string) => `/*
  * offline) and ships as a single-file binary, so the fonts have to be part of the artifact: Vite
  * fingerprints these woff2 files into \`dist/assets\` and the CLI embeds that output. A \`<link>\` to a
  * font CDN satisfied none of it — it left an air-gapped host in system faces, put first paint behind a
- * third party, and contacted the CDN on every load despite the app's analytics opt-out.
+ * third party, and contacted the CDN on every load.
  *
  * The bundled faces are VARIABLE fonts (the interface + code families carry real italics), which is
  * what makes the type scale honest: every weight and markdown \`<em>\` are real faces, not the

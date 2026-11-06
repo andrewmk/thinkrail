@@ -183,9 +183,6 @@ beforeEach(() => {
 		activeLogin: null,
 		settingsOpen: false,
 		settingsSection: "providers",
-		surveyInvitationOpen: false,
-		surveyWindowOpen: false,
-		inAppSurvey: null,
 		chatLineWidth: DEFAULT_CONFIG.chatLineWidth,
 		fileLineWidth: DEFAULT_CONFIG.fileLineWidth,
 		chatLineWidthBounded: DEFAULT_CONFIG.chatLineWidthBounded,
@@ -2917,7 +2914,6 @@ test("installWelcomeSnapshot lands one complete snapshot and advances its own ge
 	useAppStore.getState().installWelcomeSnapshot(44, [p1, closed], [p1, closed], {
 		...DEFAULT_CONFIG,
 		theme: "test-theme",
-		analyticsEnabled: false,
 		terminalReplayKb: 256,
 	});
 	unsubscribe();
@@ -3782,41 +3778,6 @@ test("openSettings deep-links to a section (default providers); closeSettings hi
 	s.closeSettings();
 	expect(useAppStore.getState().settingsOpen).toBe(false);
 	expect(useAppStore.getState().settingsSection).toBe("providers");
-});
-
-test("the survey invitation show action is idempotent and hide clears it", () => {
-	let updates = 0;
-	const unsubscribe = useAppStore.subscribe(() => {
-		updates += 1;
-	});
-
-	useAppStore.getState().showSurveyInvitation();
-	useAppStore.getState().showSurveyInvitation();
-	expect(useAppStore.getState().surveyInvitationOpen).toBe(true);
-	expect(updates).toBe(1);
-
-	useAppStore.getState().hideSurveyInvitation();
-	expect(useAppStore.getState().surveyInvitationOpen).toBe(false);
-	expect(updates).toBe(2);
-	unsubscribe();
-});
-
-test("opening the survey window closes the invitation and Settings in one update", () => {
-	useAppStore.setState({ surveyInvitationOpen: true, settingsOpen: true });
-	let updates = 0;
-	const unsubscribe = useAppStore.subscribe(() => {
-		updates += 1;
-	});
-	useAppStore.getState().openSurveyWindow();
-	expect(useAppStore.getState()).toMatchObject({
-		surveyWindowOpen: true,
-		surveyInvitationOpen: false,
-		settingsOpen: false,
-	});
-	expect(updates).toBe(1);
-	useAppStore.getState().closeSurveyWindow();
-	expect(useAppStore.getState().surveyWindowOpen).toBe(false);
-	unsubscribe();
 });
 
 test("an error frame is terminal: sets status/error and clears the live input + progress", () => {

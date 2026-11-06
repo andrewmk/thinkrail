@@ -173,7 +173,6 @@ const host = spawn("bun", ["--no-env-file", join(repoRoot, "packages/server/src/
 		THINKRAIL_PORT: "0",
 		THINKRAIL_DATA_DIR: join(sandbox, "data"),
 		PI_CODING_AGENT_DIR: join(sandbox, "pi-agent"),
-		THINKRAIL_NO_ANALYTICS: "1",
 	},
 	stdio: ["ignore", "pipe", "ignore"],
 });

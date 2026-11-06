@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import type { AppConfig } from "@thinkrail/contracts";
 import { removeTree } from "@thinkrail/shared/removeTree";
-import { seedAnalyticsConsent } from "./fixtures/analyticsConsent";
 import { openAppFresh, resetApp } from "./fixtures/app";
 import { openProviders } from "./fixtures/jbcentral";
 import { E2E_DATA_DIR, E2E_HOME_DIR, E2E_PI_AGENT_DIR } from "./fixtures/paths";
@@ -300,121 +299,6 @@ test("Get started detects a signed-in Claude Code and offers its sign-in above t
 		await expect(page.getByTestId("login-dialog")).toHaveCount(0);
 	} finally {
 		rmSync(claudeConfig, { force: true });
-	}
-});
-
-test("Get started asks about usage data as its own step before the models, or the shell asks after a skip", async ({
-	page,
-	baseURL,
-}) => {
-	await setOnboardingDismissed(baseURL, false);
-	await seedAnalyticsConsent(baseURL, false, false);
-	try {
-		await openColdStart(page, baseURL);
-
-		const wizard = page.getByTestId("onboarding-wizard");
-		const consent = page.getByTestId("analytics-consent-dialog");
-		await expect(wizard).toHaveAttribute("data-step", "intro");
-		await expect(consent).toHaveCount(0);
-
-		await wizard.getByTestId("onboarding-start").click();
-		await expect(wizard).toHaveAttribute("data-step", "privacy");
-		await expect(wizard.getByTestId("connect-provider-options")).toHaveCount(0);
-		await expect(wizard.getByTestId("onboarding-skip")).toHaveCount(0);
-		await expect(consent).toHaveCount(0);
-		await wizard.getByTestId("analytics-toggle").click();
-		await wizard.getByTestId("onboarding-privacy-continue").click();
-		await expect(wizard).toHaveAttribute("data-step", "connect");
-		await expect(wizard.getByTestId("connect-provider-options")).toBeVisible();
-		await expect(consent).toHaveCount(0);
-		await expect
-			.poll(() => {
-				const config = readConfig();
-				return [config?.analyticsEnabled, config?.analyticsConsentConfirmed];
-			})
-			.toEqual([false, true]);
-
-		await seedAnalyticsConsent(baseURL, false, false);
-		await openAppFresh(page);
-		await expect(wizard).toHaveAttribute("data-step", "intro");
-		await wizard.getByTestId("onboarding-skip").click();
-		await expect(wizard).toHaveCount(0);
-		await expect(consent).toBeVisible();
-	} finally {
-		await seedAnalyticsConsent(baseURL, false, true);
-	}
-});
-
-test("a failed usage-data save keeps the privacy step, its off choice and the error until a retry lands", async ({
-	page,
-	baseURL,
-}) => {
-	await setOnboardingDismissed(baseURL, false);
-	await seedAnalyticsConsent(baseURL, false, false);
-	try {
-		await openColdStart(page, baseURL);
-
-		const wizard = page.getByTestId("onboarding-wizard");
-		await wizard.getByTestId("onboarding-start").click();
-		await expect(wizard).toHaveAttribute("data-step", "privacy");
-		const toggle = wizard.getByTestId("analytics-toggle");
-		await expect.poll(() => readConfig()?.analyticsEnabled).toBe(true);
-		const continueButton = wizard.getByTestId("onboarding-privacy-continue");
-		await expect(continueButton).toBeEnabled();
-
-		const original = readFileSync(CONFIG_PATH, "utf8");
-		rmSync(CONFIG_PATH);
-		mkdirSync(CONFIG_PATH);
-		try {
-			await toggle.click();
-			await expect(wizard.getByRole("alert")).toBeVisible();
-			await continueButton.click();
-			await expect(wizard.getByRole("alert")).toBeVisible();
-			await expect(wizard).toHaveAttribute("data-step", "privacy");
-			await expect(toggle).toHaveAttribute("aria-checked", "false");
-		} finally {
-			rmSync(CONFIG_PATH, { recursive: true, force: true });
-			writeFileSync(CONFIG_PATH, original);
-		}
-		expect(readConfig()?.analyticsEnabled).toBe(true);
-
-		await continueButton.click();
-		await expect(wizard).toHaveAttribute("data-step", "connect");
-		expect([readConfig()?.analyticsEnabled, readConfig()?.analyticsConsentConfirmed]).toEqual([
-			false,
-			true,
-		]);
-	} finally {
-		await seedAnalyticsConsent(baseURL, false, true);
-	}
-});
-
-test("an opt-out confirmed elsewhere while the privacy step is open is adopted, not overwritten", async ({
-	page,
-	baseURL,
-}) => {
-	await setOnboardingDismissed(baseURL, false);
-	await seedAnalyticsConsent(baseURL, false, false);
-	try {
-		await openColdStart(page, baseURL);
-
-		const wizard = page.getByTestId("onboarding-wizard");
-		await wizard.getByTestId("onboarding-start").click();
-		await expect(wizard).toHaveAttribute("data-step", "privacy");
-		const toggle = wizard.getByTestId("analytics-toggle");
-		await expect(toggle).toHaveAttribute("aria-checked", "true");
-		await expect.poll(() => readConfig()?.analyticsEnabled).toBe(true);
-
-		await seedAnalyticsConsent(baseURL, false, true);
-		await expect(toggle).toHaveAttribute("aria-checked", "false");
-		await wizard.getByTestId("onboarding-privacy-continue").click();
-		await expect(wizard).toHaveAttribute("data-step", "connect");
-		expect([readConfig()?.analyticsEnabled, readConfig()?.analyticsConsentConfirmed]).toEqual([
-			false,
-			true,
-		]);
-	} finally {
-		await seedAnalyticsConsent(baseURL, false, true);
 	}
 });
 

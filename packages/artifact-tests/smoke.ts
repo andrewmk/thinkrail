@@ -6,7 +6,6 @@ import { basename, dirname, join, relative } from "node:path";
 import { removeTree } from "@thinkrail/shared/removeTree";
 import { channel, version } from "@thinkrail/shared/version";
 import { windowsFileIdentity } from "@thinkrail/shared/windowsIdentity";
-import { runDesktopAnalyticsProbe } from "./src/analyticsProbe";
 import { locateDesktopLauncher, repoRoot } from "./src/artifact";
 import {
 	type ArtifactHostAdapter,
@@ -237,13 +236,7 @@ function copyApplication(launcher: string): string {
 	return join(copiedRoot, relative(bundleRoot, launcher));
 }
 
-const analyticsOnly = process.argv.includes("--analytics");
-const launcher = copyApplication(
-	locateDesktopLauncher(
-		undefined,
-		process.argv.slice(2).find((arg) => arg !== "--analytics"),
-	),
-);
+const launcher = copyApplication(locateDesktopLauncher(undefined, process.argv.slice(2)[0]));
 
 async function launchDesktop(
 	env: Record<string, string>,
@@ -442,7 +435,6 @@ async function runMutedSmoke(): Promise<void> {
 				THINKRAIL_DATA_DIR: join(isolated, "data"),
 				PI_CODING_AGENT_DIR: join(isolated, "agent"),
 				XDG_CACHE_HOME: join(isolated, "cache"),
-				THINKRAIL_NO_ANALYTICS: "1",
 				CI: "1",
 				PI_OFFLINE: "1",
 			}),
@@ -466,8 +458,7 @@ async function runMutedSmoke(): Promise<void> {
 }
 
 try {
-	if (analyticsOnly) await runDesktopAnalyticsProbe(adapter);
-	else await runMutedSmoke();
+	await runMutedSmoke();
 } catch (error) {
 	console.error(`desktop smoke FAILED: ${error instanceof Error ? error.message : error}`);
 	process.exitCode = 1;

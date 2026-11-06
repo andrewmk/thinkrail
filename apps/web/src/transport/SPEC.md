@@ -34,7 +34,7 @@ batches high-frequency Pi events without allowing later wire messages to overtak
   response can, and the request it named is already gone from `pending`, so nothing would replay or re-ack it;
   `resume` repairs them all at once by restating the truth rather than confirming the confirmations —, channel
   `subscribe` with last-value replay for snapshots; append-only terminal data and the one-shot terminal
-  exit/detach + session-creation/deletion + `provider.changed` invalidation + addressed `feedback.interview` and `feedback.githubStar`
+  exit/detach + session-creation/deletion + `provider.changed` invalidation
   channels, plus scoped `session.resourcesChanged` invalidations and per-session `mcp.status` snapshots, are never cached or replayed to late
   subscribers. Resource metadata hydration belongs to the mounted chat integration, not replayed
   invalidation payloads. Reconnect/backoff;
@@ -46,7 +46,7 @@ batches high-frequency Pi events without allowing later wire messages to overtak
   one atomic delivery at roughly 30 Hz, a 128-event forced-flush ceiling, and `flush`/`dispose` lifecycle);
   `wireTransport.ts` (`initTransport`/
   `getTransport` singleton; routes `server.welcome`, **`host.updateAvailable`**, **`project.updated`**, `pi.event`, `pi.extensionUi`,
-  **`session.created`**, **`session.deleted`**, **`provider.changed`**, addressed **`feedback.interview`** and **`feedback.githubStar`**, **the
+  **`session.created`**, **`session.deleted`**, **`provider.changed`**, **the
   `workspace.created`/`updated`/`removed` lifecycle trio, the `workspace.creationChanged`/`creationRemoved`
   pair, and `workspace.fsChanged`** into the store — and
   folds every connection transition through
@@ -76,17 +76,6 @@ batches high-frequency Pi events without allowing later wire messages to overtak
   guard (the model-catalog hook uses the same guarded write for every list/refresh, so an older reply cannot
   restore a removed generation's models; provider settings observes the same version and re-reads
   `provider.status`), each valid `server.welcome` first clearing any popup projection left by a host restart,
-  then `feedback.interview` via the idempotent `showSurveyInvitation()`, only from a v97+ host (an older host
-  still sends the retired interview invitation on that channel) — the shell holds the invitation
-  behind onboarding and the consent dialog, and additional analytics may be off (a surviving host claim
-  re-delivers the addressed event immediately after welcome). `feedback.githubStar` raises one info toast (`githubStar.ts`: 60 s,
-  a "View on GitHub" action opening `REPO_URL`, labelled `| ☆ 7.1k` with the host-read star count formatted like the
-  website, plain when the payload has none); the host decides when, reads the count and sends it once, so the client
-  keeps no count or gate of its own and never contacts GitHub. `loadInAppSurvey()` installs `feedback.survey` (asked in `currentLocale()`, so PostHog's
-  translation for the UI language is shown when it has one; a language switch applies on the next load)
-  into the store after welcome, when Settings opens, when the survey window opens, and after a
-  `SURVEY_CHANGED` refusal; it never rejects, and a stale reply is dropped by generation, so
-  `forgetInAppSurvey()` after a successful Send cannot be undone by a load still in flight,
   `workspace.fsChanged` via `noteFsChanged(payload)`, **`mcp.status`** via the generation-guarded
   `applyMcpStatus(snapshot)`, and **`settings.changed`** via `applyConfig(config)` — the post-startup server-synced app config broadcast;
   welcome config lands in the atomic install above.
@@ -155,16 +144,6 @@ Workspace removal, live or reconciled on reconnect, cancels its active MCP login
 `provider.loginCancel` after retiring the local modal. Late login frames for tombstoned workspaces are cancelled instead of installed; the MCP start
 response path does the same if removal preceded its acknowledgement. Cancellation is best-effort over
 the existing reconnect-safe request transport; the host's bounded probe lifetime remains the final cleanup.
-**Client error reports** (`errorReports.ts`): `installClientErrorReporting()` listens for window `error` /
-`unhandledrejection`, and `reportClientError(clientErrorReport(kind, error, boundary?))` forwards the raw
-class and the stack with the message cut out of it (a V8 stack header repeats the message, and its lines
-can look like frames) over fire-and-forget `client.reportError` — only to a host with
-`CLIENT_ERROR_REPORT_PROTOCOL_VERSION` (v90); reports raised before the welcome wait for it (≤ 10 queued), and a
-page sends at most 50. Each report carries the PostHog chunk ids (≤ 20) that the release build's
-injected `_posthogChunkIds` registry assigns to URLs in its own stack, so uploaded maps resolve its frames.
-The browser never scrubs or holds a vendor client: the host is the only sanitizer.
-`main.tsx` installs the listeners and injects the forwarder into `components`' error-boundary seam.
-
 - **Public surface (barrel):** `initTransport`, `getTransport`, `prewarmWorkspaceSkillLoad`, the three
   skill-load-safe session request wrappers, `errorText`, `RequestError`, `RequestTimeoutError`, `wsErrorCode`, `requestMcpList`,
   `watchMcpWorkspace`, `ConnectionStatus`,
@@ -206,9 +185,7 @@ The browser never scrubs or holds a vendor client: the host is the only sanitize
   `HOST_UPDATE_RUN_PROTOCOL_VERSION` + `Ack` + the typed `host.update` method for the CLI-host update action,
   `PLAN_REVIEW_SUBAGENT_PROTOCOL_VERSION` for the `supportsPlanReview` gate,
   `CHANGE_MUTATIONS_PROTOCOL_VERSION` for the diff-mutation gate, `REVIEW_RICH_ANCHORS_PROTOCOL_VERSION`
-  for the rich-anchor authoring gate, `CLIENT_ERROR_REPORT_PROTOCOL_VERSION` + `ClientErrorReport` for
-  `client.reportError`, `provider.changed`, the empty
-  addressed `feedback.interview` invitation, `HostUpdateNotice` for `server.welcome` +
+  for the rich-anchor authoring gate, `provider.changed`, `HostUpdateNotice` for `server.welcome` +
   `host.updateAvailable`,
   `WorkspaceFsChangedPayload` for `workspace.fsChanged`, and `AppConfig` for `server.welcome`'s config +
   `settings.changed`); `store`

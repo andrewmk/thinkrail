@@ -91,19 +91,9 @@ subsequent external-navigation probes need the window. Desktop-backed Playwright
 only hydrated client. The live-window ready/control seam remains in the launcher, never a runtime import
 of this package.
 
-Normal artifact children set `CI=1` to mute every analytics tier without changing the production runtime mode; `THINKRAIL_NO_ANALYTICS`
-alone suppresses only additional events. `bun run smoke:desktop --analytics [launcher]` instead runs a
-controlled hidden-host probe against a loopback PostHog collector, never the vendor endpoint. The collector
-also answers the host's in-app survey list read (`GET /api/surveys/?token=…`) with an empty list, so a keyed
-human launch neither fails the probe nor offers a survey; muted launches must make no request at all. It removes
-inherited CI/test/optional mutes and proxies for human-mode launches, checks first packaged initialization
-emits `app_installed` before `app_started`, checks restart emits only `app_started`, and pins standard
-desktop/release/platform provenance plus one UUID across both (including additional opt-out). Any
-`$exception` error report a launch happens to emit stays outside that launch sequence but must share the
-UUID, stay personless, and carry only allow-listed plain properties. It then proves
-CI and test mutes independently. No UI action or confirmation is simulated; delivery is checked after normal
-host shutdown. The expected release identity is the shared identity used to build the artifact, so the
-probe needs a release-stamped (keyed) artifact; an unstamped build correctly emits nothing.
+The app performs no remote telemetry: the runtime ships no analytics client, and no probe or build step
+may introduce one. Artifact children still run non-interactively (`CI=1` is kept as the non-interactive
+marker for the spawned host, and `PI_OFFLINE=1` keeps the in-process `pi` from its own network use).
 
 Every host owns isolated home, data, agent and cache directories; environment overrides respect Windows'
 case-insensitive keys. The native UI launch pre-creates its home directory: on macOS the window never

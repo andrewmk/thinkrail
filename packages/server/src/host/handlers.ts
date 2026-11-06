@@ -82,14 +82,6 @@ import {
 	stopBackgroundCommand,
 	stopSubagent,
 } from "../agent";
-import {
-	type AdditionalAnalyticsCapture,
-	captureSurveyResponse,
-	type ErrorReport,
-	reportClientError,
-	type SendMode,
-	track,
-} from "../analytics";
 import { suggestPrDescription } from "../assist";
 import {
 	cancelLogin,
@@ -111,18 +103,6 @@ import { selectDirectory } from "../dialog";
 import { listAvailableEditors, openEditor, revealInFileManager } from "../editors";
 import { hostEnvironmentStatus, updateHostEnvironment } from "../environment";
 import { listExtensionCatalog } from "../extensions";
-import {
-	completeSurvey,
-	confirmInAppSurvey,
-	currentInAppSurvey,
-	localizeSurvey,
-	parseSurveySubmission,
-	recordAcceptedMessage,
-	refreshInAppSurvey,
-	respondToInvitation,
-	surveyIsCompleted,
-	surveyResponse,
-} from "../feedback";
 import { fontsDir, listInstalledFonts, readUserFonts } from "../fonts";
 import { readDir, readFile } from "../fs";
 import {
@@ -252,11 +232,9 @@ import {
 	workspaceDiffStats,
 } from "../workspaces";
 import { ackSend } from "./ackSend";
-import { sessionProviderAnalytics, trackChatStarted } from "./authAnalytics";
 import { nudgeBaseRefWorkspaces } from "./fsNudge";
 import { buildHistoryScope } from "./historyScope";
 import { provisionInitialTerminal } from "./initialTerminal";
-import { dropLogin, recordLoginStart } from "./loginAnalytics";
 import {
 	mcpAdd,
 	mcpApprove,
@@ -285,24 +263,9 @@ import {
 	packagesUpdate,
 } from "./packages";
 import { planReviewRunning } from "./planReviewQueue";
-import {
-	additionalCapture,
-	captureAdditional,
-	captureReviewCommentAdded,
-	captureReviewCommentResolved,
-	captureReviewCommentsSent,
-	centralConnectOutcome,
-	directoryPickOutcome,
-	observePrAction,
-	observeSetupAction,
-	observeSetupRead,
-	providerAvailability,
-} from "./productAnalytics";
 import { startPlanReview } from "./requestReview";
 import { withChangeLock, withReviewLock } from "./reviewLock";
-import { runObservation } from "./runAnalytics";
 import { scheduleLifecyclePass } from "./settledLifecycle";
-import { taskObservation } from "./taskAnalytics";
 import {
 	claimItemFix,
 	clearChangesRequestedIfResolved,
@@ -338,23 +301,8 @@ async function archiveTeardown(ws: Workspace): Promise<void> {
 	}
 }
 
-async function sendUserMessage(
-	mode: SendMode,
-	sessionId: string,
-	text: string,
-	clientKey: string,
-	operation: () => Promise<void>,
-): Promise<{ ok: true }> {
-	const control = isControlMessage(text);
-	const provider = control ? undefined : sessionProviderAnalytics(sessionId);
-	await ackSend(runObservation.send(sessionId, control ? "internal" : "user", operation));
-	if (provider) {
-		track({
-			name: "message_sent",
-			params: { mode, provider: provider.provider, auth_method: provider.auth_method },
-		});
-		recordAcceptedMessage(clientKey);
-	}
+async function sendUserMessage(operation: () => Promise<void>): Promise<{ ok: true }> {
+	await ackSend(operation());
 	return { ok: true };
 }
 
@@ -372,18 +320,10 @@ async function startChat(
 		thinkingLevel: defaults.thinkingLevel,
 	});
 	if (choice.model && created.model) noteRecentModel(created.model);
-	trackChatStarted({
-		sessionId: created.sessionId,
-		model: defaults.model ? created.model : null,
-	});
 	return created;
 }
 
-const creationClients = new Map<string, string>();
-
 export const workspaceCreationHandoff: CreationHandoff = async (workspace, kickoff) => {
-	const clientKey = creationClients.get(workspace.id) ?? "";
-	creationClients.delete(workspace.id);
 	provisionInitialTerminal(workspace);
 	if (!kickoff) return {};
 	await ensureWatch(workspace.id, { prewarm: false });
@@ -396,7 +336,7 @@ export const workspaceCreationHandoff: CreationHandoff = async (workspace, kicko
 	const preflight = new Promise<void>((resolve) => {
 		preflighted = resolve;
 	});
-	const sent = sendUserMessage("prompt", sessionId, kickoff.text, clientKey, () =>
+	const sent = sendUserMessage(() =>
 		promptSession(sessionId, kickoff.text, kickoff.images, { onPreflight: preflighted }),
 	);
 	sent.catch(() => {});
@@ -431,25 +371,21 @@ function fireReviewPrompt(
 	comments: readonly ReviewComment[],
 	sessionId: string,
 	pkg: string,
-	capture: AdditionalAnalyticsCapture | null,
 	send: (sessionId: string, text: string) => Promise<void> = promptSession,
 ): void {
 	const ids = comments.map((c) => c.id);
-	void ackSend(runObservation.send(sessionId, "internal", () => send(sessionId, pkg)))
-		.then(
-			() => captureReviewCommentsSent(capture, comments),
-			(err) => {
-				rollbackSend(workspaceId, ids, sessionId);
-				notifyExtUi(
-					sessionId,
-					`Review send failed: ${err instanceof Error ? err.message : String(err)}`,
-					"error",
-				);
-			},
-		)
-		.catch(() => {
+	void ackSend(send(sessionId, pkg)).catch((err) => {
+		try {
+			rollbackSend(workspaceId, ids, sessionId);
+			notifyExtUi(
+				sessionId,
+				`Review send failed: ${err instanceof Error ? err.message : String(err)}`,
+				"error",
+			);
+		} catch {
 			log.warn("review send rollback failed");
-		});
+		}
+	});
 }
 
 function fireTodoFixPrompt(
@@ -459,23 +395,11 @@ function fireTodoFixPrompt(
 	previous: TodoReviewRecord | undefined,
 	requested: TodoReviewRecord,
 	findings: readonly ReviewComment[],
-	capture: AdditionalAnalyticsCapture | null,
 ): void {
 	const findingIds = findings.map((c) => c.id);
-	void ackSend(
-		runObservation.send(p.sessionId, "internal", () =>
-			sendReviewFixToSession(p.sessionId, pkg, details),
-		),
-	)
-		.then(
-			() => {
-				captureAdditional(capture, {
-					name: "review_decided",
-					params: { actor: "user", verdict: "changes_requested" },
-				});
-				captureReviewCommentsSent(capture, findings);
-			},
-			(err) => {
+	void ackSend(sendReviewFixToSession(p.sessionId, pkg, details))
+		.catch((err) => {
+			try {
 				rollbackTodoFix(p, previous, requested);
 				if (findingIds.length > 0) rollbackSend(p.workspaceId, findingIds, p.sessionId);
 				notifyExtUi(
@@ -483,10 +407,9 @@ function fireTodoFixPrompt(
 					`Fix request send failed: ${err instanceof Error ? err.message : String(err)}`,
 					"error",
 				);
-			},
-		)
-		.catch((err) => {
-			log.warn("todo fix rollback failed", err);
+			} catch (rollbackError) {
+				log.warn("todo fix rollback failed", rollbackError);
+			}
 		})
 		.finally(() => releaseItemFix(p.sessionId, p.id));
 }
@@ -509,7 +432,6 @@ async function sendToFileChat(
 	workspaceId: string,
 	comments: ReviewComment[],
 	opts: { model?: WireModel; thinkingLevel?: ThinkingLevel; sessionId?: string },
-	capture: AdditionalAnalyticsCapture | null,
 ): Promise<ReviewSendResult> {
 	const ids = comments.map((c) => c.id);
 	const pkg = await buildSendPackage(workspaceId, comments);
@@ -519,7 +441,7 @@ async function sendToFileChat(
 	const existing = opts.sessionId ?? (await fileReviewSession(workspaceId, path));
 	if (existing && (await ensureSessionAttached(existing, workspaceId, ws.worktreePath))) {
 		await markCommentsSent(workspaceId, ids, existing);
-		fireReviewPrompt(workspaceId, comments, existing, pkg, capture, followUpSession);
+		fireReviewPrompt(workspaceId, comments, existing, pkg, followUpSession);
 		return {
 			sessionId: existing,
 			model: null,
@@ -540,12 +462,8 @@ async function sendToFileChat(
 		...(defaults.model ? { model: defaults.model } : {}),
 		thinkingLevel: defaults.thinkingLevel,
 	});
-	trackChatStarted({
-		sessionId: created.sessionId,
-		model: defaults.model ? created.model : null,
-	});
 	await markCommentsSent(workspaceId, ids, created.sessionId);
-	fireReviewPrompt(workspaceId, comments, created.sessionId, pkg, capture);
+	fireReviewPrompt(workspaceId, comments, created.sessionId, pkg);
 	return { ...created, reused: false };
 }
 
@@ -617,22 +535,11 @@ async function deliverToolResponse(
 	return { ok: true };
 }
 
-function invalidSurveyOnThrow<T>(build: () => T): T {
-	try {
-		return build();
-	} catch {
-		throw new CodedError("SURVEY_INVALID", "Invalid survey submission");
-	}
-}
-
 const handlers: WsHandlers = {
-	"project.open": (params) => observeSetupAction("project_open", () => openProject(params.path)),
+	"project.open": (params) => openProject(params.path),
 	"project.inspect": (params) => inspectProjectPath(params.path),
-	"project.init": (params) => observeSetupAction("project_init", () => initProject(params.path)),
-	"project.create": (params) =>
-		observeSetupAction("project_create", () =>
-			createProject(params.parentPath, params.name, params.displayName),
-		),
+	"project.init": (params) => initProject(params.path),
+	"project.create": (params) => createProject(params.parentPath, params.name, params.displayName),
 	"project.cloneDestination": (params) => ({
 		path: inspectCloneDestination(params.parentPath, params.name),
 	}),
@@ -641,10 +548,7 @@ const handlers: WsHandlers = {
 		cancelProjectClone(params.operationId, ctx.clientKey);
 		return { ok: true };
 	},
-	"project.list": () =>
-		observeSetupRead(listProjects, (projects) => ({
-			project_present: projects.length > 0 ? "yes" : "no",
-		})),
+	"project.list": () => listProjects(),
 	"project.hasSpecs": (params) => {
 		const { projectId } = params;
 		const project = listProjects().find((p) => p.id === projectId);
@@ -676,36 +580,22 @@ const handlers: WsHandlers = {
 		}
 		return updated;
 	},
-	"workspace.create": (p) =>
-		observeSetupAction("worktree_create", () => createWorkspace(p.projectId, p.name, p.baseRef)),
-	"workspace.startCreate": (p, ctx) => {
+	"workspace.create": (p) => createWorkspace(p.projectId, p.name, p.baseRef),
+	"workspace.startCreate": (p) => {
 		const creation = startWorkspaceCreation(p.projectId, {
 			...(p.name ? { name: p.name } : {}),
 			...(p.baseRef ? { baseRef: p.baseRef } : {}),
 			...(p.kickoff ? { kickoff: p.kickoff } : {}),
 		});
-		creationClients.set(creation.id, ctx.clientKey);
-		void observeSetupAction("worktree_create", () => awaitWorkspaceCreation(creation.id)).catch(
-			() => {},
-		);
+		void awaitWorkspaceCreation(creation.id).catch(() => {});
 		return creation;
 	},
 	"workspace.listCreations": () => listWorkspaceCreations(),
-	"workspace.retryCreation": (p, ctx) => {
-		const creation = retryWorkspaceCreation(p.id);
-		creationClients.set(creation.id, ctx.clientKey);
-		return creation;
-	},
-	"workspace.dismissCreation": async (p) => {
-		const dismissed = await dismissWorkspaceCreation(p.id);
-		creationClients.delete(p.id);
-		return dismissed;
-	},
+	"workspace.retryCreation": (p) => retryWorkspaceCreation(p.id),
+	"workspace.dismissCreation": (p) => dismissWorkspaceCreation(p.id),
 	"workspace.listExisting": (params) => listExistingWorktrees(params.projectId),
 	"workspace.openExisting": async (p) => {
-		return provisionInitialTerminal(
-			await observeSetupAction("worktree_attach", () => openExistingWorktree(p.projectId, p.path)),
-		);
+		return provisionInitialTerminal(await openExistingWorktree(p.projectId, p.path));
 	},
 	"workspace.rename": (p) => {
 		return renameWorkspace(p.id, p.name);
@@ -848,7 +738,7 @@ const handlers: WsHandlers = {
 	"pr.open": async (p) => {
 		refreshUserOwnedWorkspace(p.workspaceId);
 		recordWorkspaceActivity(p.workspaceId);
-		const { branch, ...result } = await observePrAction(() => openPr(p), p.source ?? "other");
+		const { branch, ...result } = await openPr(p);
 		if (result.review) {
 			setWorkspaceReview(
 				p.workspaceId,
@@ -862,8 +752,7 @@ const handlers: WsHandlers = {
 		}
 		return result;
 	},
-	"dialog.selectDirectory": () =>
-		observeSetupAction("directory_pick", selectDirectory, directoryPickOutcome),
+	"dialog.selectDirectory": () => selectDirectory(),
 	"fs.readDir": async (p) => {
 		void ensureWatch(p.workspaceId);
 		const nodes = readDir(p.workspaceId, p.path);
@@ -883,39 +772,11 @@ const handlers: WsHandlers = {
 		void ensureWatch(p.workspaceId);
 		return specGraph(p.workspaceId);
 	},
-	"todo.list": (p) => {
-		if (p.opened)
-			captureAdditional(additionalCapture(), {
-				name: "plan_opened",
-				params: { surface: p.opened },
-			});
-		return listTodos(p);
-	},
-	"todo.add": async (p) => {
-		const capture = additionalCapture();
-		const result = await addTodo(p);
-		captureAdditional(capture, {
-			name: "plan_item_added",
-			params: { surface: p.surface ?? "chat" },
-		});
-		return result;
-	},
-	"todo.update": async (p) => {
-		const observeCompletion = taskObservation.begin(p.workspaceId, p.sessionId);
-		const result = await updateTodo(p);
-		if (p.status === "done") await observeCompletion();
-		return result;
-	},
+	"todo.list": (p) => listTodos(p),
+	"todo.add": (p) => addTodo(p),
+	"todo.update": (p) => updateTodo(p),
 	"todo.remove": (p) => removeTodo(p, () => isItemUnderActiveReview(p.sessionId, p.id)),
-	"todo.review": (params) => {
-		const capture = additionalCapture();
-		const result = approveTodoReview(params);
-		captureAdditional(capture, {
-			name: "review_decided",
-			params: { actor: "user", verdict: "approved" },
-		});
-		return result;
-	},
+	"todo.review": (params) => approveTodoReview(params),
 	"todo.startReview": async (p) => {
 		const ws = getWorkspace(p.workspaceId);
 		if (!(await ensureSessionAttached(p.sessionId, p.workspaceId, ws.worktreePath)))
@@ -949,7 +810,6 @@ const handlers: WsHandlers = {
 	},
 	"todo.generateSummary": (params) => generateTodoSummary(params),
 	"todo.requestFix": async (p) => {
-		const capture = additionalCapture();
 		if (!claimItemFix(p.sessionId, p.id))
 			throw new Error(`A fix request is already active for ${p.id}.`);
 		try {
@@ -990,7 +850,6 @@ const handlers: WsHandlers = {
 					prepared.previous,
 					prepared.requested,
 					prepared.findings,
-					capture,
 				);
 			} catch (error) {
 				if (prepared.findings.length > 0)
@@ -1130,36 +989,13 @@ const handlers: WsHandlers = {
 		return { ok: true } as const;
 	},
 	"session.create": (p) => startChat(p.workspaceId, p),
-	"session.prompt": (p, ctx) => {
-		return sendUserMessage("prompt", p.sessionId, p.text, ctx.clientKey, () =>
-			promptSession(p.sessionId, p.text, p.images),
-		);
-	},
-	"session.steer": (p, ctx) => {
-		return sendUserMessage("steer", p.sessionId, p.text, ctx.clientKey, () =>
-			steerSession(p.sessionId, p.text, p.images),
-		);
-	},
-	"session.followUp": (p, ctx) => {
-		return sendUserMessage("follow_up", p.sessionId, p.text, ctx.clientKey, () =>
-			followUpSession(p.sessionId, p.text, p.images),
-		);
-	},
-	"session.clearQueue": (p) => {
-		const cleared = clearQueueSession(p.sessionId, p.requireTextOnly);
-		runObservation.clearQueue(p.sessionId);
-		return cleared;
-	},
-	"session.removeQueued": async (p) => {
-		const result = await removeQueuedSession(p.sessionId, p.kind, p.index);
-		if (result.queue.steering.length === 0 && result.queue.followUp.length === 0) {
-			runObservation.clearQueue(p.sessionId);
-		}
-		return result;
-	},
+	"session.prompt": (p) => sendUserMessage(() => promptSession(p.sessionId, p.text, p.images)),
+	"session.steer": (p) => sendUserMessage(() => steerSession(p.sessionId, p.text, p.images)),
+	"session.followUp": (p) => sendUserMessage(() => followUpSession(p.sessionId, p.text, p.images)),
+	"session.clearQueue": (p) => clearQueueSession(p.sessionId, p.requireTextOnly),
+	"session.removeQueued": (p) => removeQueuedSession(p.sessionId, p.kind, p.index),
 	"session.abort": async (p) => {
 		const stopping = abortSession(p.sessionId, p.restoreQueue);
-		if (p.restoreQueue) runObservation.clearQueue(p.sessionId);
 		const restoredQueue = await stopping;
 		return {
 			ok: true,
@@ -1169,8 +1005,6 @@ const handlers: WsHandlers = {
 	"session.dispose": async (params) => {
 		const { sessionId } = params;
 		await removeSession(sessionId);
-		runObservation.forget(sessionId);
-		taskObservation.forget(sessionId);
 		return { ok: true } as const;
 	},
 	"session.delete": async (p) => {
@@ -1233,7 +1067,7 @@ const handlers: WsHandlers = {
 		if (!isControlMessage(p.text)) throw new Error("Session nudge must be a control message");
 		const nudge = nudgeSession(p.sessionId, p.text, p.images);
 		if (nudge.disposition !== "needs_input") {
-			await ackSend(runObservation.send(p.sessionId, "internal", nudge.send));
+			await ackSend(nudge.send());
 		}
 		return { disposition: nudge.disposition };
 	},
@@ -1312,21 +1146,11 @@ const handlers: WsHandlers = {
 	},
 	"session.respondToTool": (p) => deliverToolResponse(p.sessionId, p.toolCallId, p.response),
 	"session.answerQuestion": (p) => deliverToolResponse(p.sessionId, p.toolCallId, p.result),
-	"model.list": () =>
-		observeSetupRead(listAvailableModels, (models) => ({
-			model_available: models.length > 0 ? "yes" : "no",
-		})),
+	"model.list": () => listAvailableModels(),
 	"model.clampThinking": async (p) => {
 		return { level: await clampThinkingForModel({ provider: p.provider, id: p.id }, p.level) };
 	},
-	"model.refresh": (p) => {
-		return observeSetupRead(
-			() => refreshAvailableModels(p.force === true),
-			(result) => ({
-				model_available: result.models.length > 0 ? "yes" : result.complete ? "no" : "unknown",
-			}),
-		);
-	},
+	"model.refresh": (p) => refreshAvailableModels(p.force === true),
 	"model.contextSettings": () => listModelContextSettings(),
 	"model.setContextWindow": (p) => {
 		return setModelContextWindow(p.target, p.contextWindow);
@@ -1335,23 +1159,10 @@ const handlers: WsHandlers = {
 	"customEndpoints.probe": (p) => probeCustomEndpoint(p),
 	"customEndpoints.save": (p) => saveCustomEndpoint(p),
 	"customEndpoints.remove": (p) => removeCustomEndpoint(p.id),
-	"model.default": () =>
-		observeSetupRead(
-			() => resolveNewChatModel({}),
-			(result) => (result.model ? { model_available: "yes" } : {}),
-		),
-	"provider.status": () =>
-		observeSetupRead(getProviderStatus, (report) => ({
-			provider_available: providerAvailability(report),
-		})),
+	"model.default": () => resolveNewChatModel({}),
+	"provider.status": () => getProviderStatus(),
 	"provider.detect": async () => ({ accounts: await detectAccounts() }),
-	"provider.loginStart": (p) => {
-		const type = p.type ?? "oauth";
-		const capture = additionalCapture();
-		const handle = startLogin(p.providerId, type, dropLogin);
-		recordLoginStart(handle.loginId, type, capture);
-		return handle;
-	},
+	"provider.loginStart": (p) => startLogin(p.providerId, p.type ?? "oauth"),
 	"provider.loginReply": (reply, ctx) => {
 		if (isMcpLoginId(reply.loginId)) replyMcpProbe(reply.loginId, ctx.clientKey, reply.value);
 		else resolveLogin(reply);
@@ -1363,7 +1174,6 @@ const handlers: WsHandlers = {
 			cancelMcpProbe(loginId, ctx.clientKey);
 			return { ok: true } as const;
 		}
-		dropLogin(loginId);
 		cancelLogin(loginId);
 		return { ok: true } as const;
 	},
@@ -1375,8 +1185,7 @@ const handlers: WsHandlers = {
 		await disableAnthropicExtraUsageWarning();
 		return { ok: true } as const;
 	},
-	"provider.jbcentralConnect": () =>
-		observeSetupAction("provider_connect", connectJbcentral, centralConnectOutcome),
+	"provider.jbcentralConnect": () => connectJbcentral(),
 	"provider.jbcentralDisconnect": () => disconnectJbcentral(),
 	"provider.jbcentralStartProxy": () => startProxyJbcentral(),
 	"provider.jbcentralLogin": () => jbcentralLogin(),
@@ -1400,50 +1209,6 @@ const handlers: WsHandlers = {
 	},
 	"environment.get": () => hostEnvironmentStatus(),
 	"environment.update": (params) => updateHostEnvironment(params.environment),
-	"feedback.respond": (params) => {
-		respondToInvitation(params.action);
-		return { ok: true } as const;
-	},
-	"feedback.survey": async (params) => {
-		await refreshInAppSurvey();
-		const survey = currentInAppSurvey();
-		if (!survey || surveyIsCompleted(survey.id, survey.iteration)) return { survey: null };
-		const language =
-			typeof params?.language === "string" && params.language.length <= 35
-				? params.language
-				: undefined;
-		return { survey: localizeSurvey(survey, language) };
-	},
-	"feedback.survey.submit": async (params) => {
-		const submission = invalidSurveyOnThrow(() => parseSurveySubmission(params));
-		const survey = await confirmInAppSurvey().catch(() => {
-			throw new CodedError("SURVEY_NOT_SENT", "Survey could not be confirmed");
-		});
-		if (!survey || surveyIsCompleted(survey.id, survey.iteration)) {
-			throw new CodedError("SURVEY_UNAVAILABLE", "Survey is unavailable");
-		}
-		if (
-			survey.id !== submission.surveyId ||
-			survey.iteration !== submission.iteration ||
-			localizeSurvey(survey, submission.language).language !== submission.language
-		) {
-			throw new CodedError("SURVEY_CHANGED", "Survey changed");
-		}
-		const properties = invalidSurveyOnThrow(() => surveyResponse(survey, submission));
-		if (!captureSurveyResponse(properties)) {
-			throw new CodedError("SURVEY_NOT_SENT", "Survey answers were not sent");
-		}
-		try {
-			completeSurvey(survey.id, survey.iteration);
-		} catch (error) {
-			log.warn("survey completion was not persisted", error);
-		}
-		return { ok: true } as const;
-	},
-	"client.reportError": (params) => {
-		reportClientError(typeof params === "object" && params !== null ? params : {});
-		return { ok: true } as const;
-	},
 	"history.search": (p) => {
 		const { filter, labels } = buildHistoryScope(p.scope, listProjects(), (projectId) =>
 			listWorkspaceRecords(projectId),
@@ -1460,24 +1225,10 @@ const handlers: WsHandlers = {
 		ensureWatch(p.workspaceId);
 		return markClientStale(await getReviewSnapshot(p.workspaceId), p.workspaceId);
 	},
-	"review.commentAdd": (p) => {
-		const capture = additionalCapture();
-		return withReviewLock(p.workspaceId, async () => {
-			const comment = await addComment(p);
-			captureReviewCommentAdded(capture, comment);
-			return comment;
-		});
-	},
-	"review.commentUpdate": (p) => {
-		const capture = additionalCapture();
-		return withReviewLock(p.workspaceId, async () => {
-			const terminal = p.status === "resolved" || p.status === "dismissed" ? p.status : null;
-			const before = terminal
-				? (await getReviewSnapshot(p.workspaceId)).comments.find((c) => c.id === p.id)?.status
-				: undefined;
+	"review.commentAdd": (p) => withReviewLock(p.workspaceId, async () => addComment(p)),
+	"review.commentUpdate": (p) =>
+		withReviewLock(p.workspaceId, async () => {
 			const updated = await updateComment(p);
-			if (terminal && before !== terminal && updated.status === terminal)
-				captureReviewCommentResolved(capture, "user", terminal);
 			// Resolving/dismissing the item's last open finding must clear its changes_requested verdict
 			// too (no-op while findings remain), the same invariant as commentDelete.
 			if (updated.origin?.todoId)
@@ -1487,8 +1238,7 @@ const handlers: WsHandlers = {
 					id: updated.origin.todoId,
 				});
 			return updated;
-		});
-	},
+		}),
 	"review.commentDelete": (p) => {
 		return withReviewLock(p.workspaceId, async () => {
 			const origin = (await getReviewSnapshot(p.workspaceId)).comments.find(
@@ -1518,24 +1268,20 @@ const handlers: WsHandlers = {
 			return { ok: true } as const;
 		});
 	},
-	"review.sendComment": (p) => {
-		const capture = additionalCapture();
-		return withReviewLock(p.workspaceId, async () =>
-			sendToFileChat(p.workspaceId, await sendableComments(p.workspaceId, [p.id]), p, capture),
-		);
-	},
-	"review.sendBatch": (p) => {
-		const capture = additionalCapture();
-		return withReviewLock(p.workspaceId, async () => {
+	"review.sendComment": (p) =>
+		withReviewLock(p.workspaceId, async () =>
+			sendToFileChat(p.workspaceId, await sendableComments(p.workspaceId, [p.id]), p),
+		),
+	"review.sendBatch": (p) =>
+		withReviewLock(p.workspaceId, async () => {
 			const comments = await sendableComments(p.workspaceId, p.commentIds);
 			const sessions: ReviewSendResult[] = [];
 			for (const group of reviewSendGroups(comments, p.sessionId)) {
-				sessions.push(await sendToFileChat(p.workspaceId, group, p, capture));
+				sessions.push(await sendToFileChat(p.workspaceId, group, p));
 			}
 			if (sessions.length === 0) throw new Error("No draft comments to send.");
 			return { sessions };
-		});
-	},
+		}),
 	"template.list": (params) => ({
 		templates: listTemplates(resolveTemplateReadDirs(params)),
 	}),
@@ -1563,14 +1309,6 @@ function dispatch<M extends WsMethodName>(method: M, params: WsParams<M>, ctx: R
 
 export function requestMethodDiagnostic(method: string): string {
 	return isWsMethod(method) ? method : "unknown method";
-}
-
-export function requestErrorReport(method: string): ErrorReport {
-	return {
-		source: "request",
-		handled: true,
-		...(isWsMethod(method) ? { requestMethod: method } : {}),
-	};
 }
 
 function supportsBranchStatus(protocolVersion: number | undefined): boolean {

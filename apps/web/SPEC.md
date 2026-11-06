@@ -88,13 +88,8 @@ development build (`NODE_ENV=development vite build --mode development`) streams
 (`e2e/perf/chatReplay`) into a mounted chat and must keep `performance.getEntriesByType("measure")` flat.
 On 19.2.0 it grew by about 1,500 entries per 12 KB message; on the fixed releases it stays at zero.
 
-**Release source maps are build-only and never shipped.** With `THINKRAIL_SOURCEMAPS_RELEASE` set (a
-credentialed release build, [[module-ci-release]]), `vite.config.ts` emits hidden maps and the
-`sourceMapUpload.ts` plugin runs `posthog-cli sourcemap process --delete-after` on `dist`, failing if
-any `.map` remains; without it the build is unchanged. `posthogCli.ts` is the repo's only way to run
-posthog-cli (the root `posthog-cli` script exposes it to desktop's `preBuild`): it checks the binary against
-pinned SHA-256s before running it ([[module-ci-release]]). The injected chunk-id registry is what
-`transport` reads for UI error reports.
+No release source maps are built or shipped: the app performs no remote telemetry, so there is no
+symbolication pipeline behind a build.
 
 **The React Compiler is on for every `apps/web` bundle** (`vite.config.ts`: `@rolldown/plugin-babel` running
 `@vitejs/plugin-react`'s `reactCompilerPreset()` over dev and build). Three devDependencies live in this
@@ -359,7 +354,7 @@ themselves.
   cannot drift; the imports are generated from it. Vite emits the woff2 files
   into `dist/assets`, and `apps/cli` embeds them. No font CDN — the host is local and often
   offline, and an external `<link>` also put first paint behind a third party and contacted it on every
-  load despite the analytics opt-out. `e2e/fonts.spec.ts` pins both halves (no CDN request; the real
+  load. `e2e/fonts.spec.ts` pins both halves (no CDN request; the real
   faces present).
   A user's own font files follow the same rule from the other side: the host serves them from
   `<dataDir>/fonts` on its `/fonts/` route ([[submodule-server-fonts]]), and [[submodule-web-fonts]]

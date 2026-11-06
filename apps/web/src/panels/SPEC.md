@@ -430,7 +430,7 @@ when a provider that was not configured when the surface opened becomes configur
 login or a Central connect alike; the surface's first report is that baseline, even one whose re-read is still
 in flight (waiting for a current one would absorb a sign-in that lands first), unless it passes
 `configuredAtStart`, which the wizard does as empty (a cold start has no provider), so one connected through
-Settings during the intro or privacy step is still verified on reaching Connect — `ConnectProviderOptions` reports it once through `onConnected`, and only from a current, successful snapshot (never while a re-read is
+Settings during the intro is still verified on reaching Connect — `ConnectProviderOptions` reports it once through `onConnected`, and only from a current, successful snapshot (never while a re-read is
 in flight or after a failed one, so a provider signed out a moment before Get started is not verified), and the host
 surface decides: `ConnectProviderDialog` clears that provider's finished login (never a newer one), closes itself, and raises one success
 toast naming the provider and the `model.list` count ("JetBrains AI connected — 23 models available"), then
@@ -471,8 +471,7 @@ open or recent projects, and the provider status snapshot reports none. The deci
 connecting a provider mid-wizard does not tear it down. It opens on an **intro**
 (the brand title, the landing page's tagline and its three "why" beats — worktrees, specs, pi as the
 engine — as small cards, and **Get started**; the copy follows thinkrail.ai so first run and landing say the same thing) — a first-time user meets the
-product before a wall of providers. Then, only while analytics consent is unconfirmed, a **privacy** step (below,
-under `AnalyticsConsentDialog`); then **Connect** (`ConnectProviderOptions`); once a provider becomes
+product before a wall of providers. Then **Connect** (`ConnectProviderOptions`); once a provider becomes
 configured, the login dialog closes and a loading **verification** covers the options in place (same box, no resize) — no
 tokens spent, a `model.list` plus `model.default` read. `model.list` serves a cached snapshot while it refreshes the
 catalogs in the background, so an empty first read falls back to an awaited `model.refresh` (the same refresh, now
@@ -488,7 +487,7 @@ while it is invisible; under reduced motion the swap is instant. Reaching done p
 refresh warns and offers **Check again**
 (re-runs both reads, e.g. after fixing the account elsewhere) and Back to the choices — Back alone could not
 return, since the provider is configured and so no longer listed. The wizard owns no project step of its own and shows no progress strip.
-**Skip setup** is on every screen before done except privacy, whose Continue is the only way on; skipping also cancels any
+**Skip setup** is on the intro only; skipping also cancels any
 target-less login still pending in the dialog (`cancelUnownedLogin`, shared with `ConnectProviderDialog`).
 A login is owned by the start that requested it (`startReservedLogin`): when the surface closes before
 `provider.loginStart` answers, the late `loginId` is cancelled and cleared instead of running hidden.
@@ -636,11 +635,9 @@ a project picker, the prompt hero, and the reused
   create dialog.) **`SettingsDialog`** is the app-settings surface the shell's topbar gear opens — a
   **store-driven two-pane shell**: one nav list, rendered once, beside a scrollable content pane. At `md`+
   the list is a rail grouped **Agent** (Models, Providers, MCP servers, Prompt templates, Environment) ·
-  **Interface** (Chat, Appearance, Language, Layout, Terminal) · **System** (Workspaces, Integrations, Extensions,
-  Notifications, Privacy, Updates). Integrations keeps section id `github`: today it is the GitHub CLI page
-  and it is the home for further integrations. Below `md` the same list is a horizontal scrolling strip without group labels. The
-  Feedback card (`settings-nav-feedback`, “Share feedback”) belongs to that list at
-  every width, pinned to the rail's bottom at `md`+. The pure nav data — groups, protocol and
+  **Interface** (Chat, Appearance, Language, Layout, Keyboard, Terminal) · **System** (Workspaces, Integrations,
+  Extensions, Notifications, Updates). Integrations keeps section id `github`: today it is the GitHub CLI page
+  and it is the home for further integrations. Below `md` the same list is a horizontal scrolling strip without group labels. The pure nav data — groups, protocol and
   injected-content gating, and resolving a requested section to an available one (a gated or retired id,
   e.g. an old `review` / `line-width` deep link, falls back to Appearance) — lives in `panels/settingsNav.ts`,
   so the dialog only renders it. `settingsOpen`/`settingsSection` live in the store so the gear AND the
@@ -1047,47 +1044,6 @@ a project picker, the prompt hero, and the reused
   channel — the visible, in-app acquisition path that does not depend on an
   out-of-focus event. The notification pipeline, suppression, and away-path permission preface live in
   [[submodule-web-notifications]].
-  **`PrivacySettings`** manages the additional-data preference and
-  confirmation together; the event contract belongs to [[submodule-server-analytics]]. The pane ends with a link to the analytics section of the project readme.
-  **`AnalyticsConsentDialog`** mounts once through shell after a capable host's unconfirmed config hydrates,
-  held back (with the survey invitation) while the cold-start onboarding wizard may still show or is
-  showing (`selectOnboardingActive`): a new user meets the product before a privacy question, and sharing
-  stays off until the dialog mounts, so holding it never collects without asking. The wizard itself asks at
-  its natural seam — **Get started** leads to its own **privacy** step (same `AnalyticsConsentChoice` body,
-  priming and saving through `useAnalyticsConsent`; **Continue** confirms and advances only once that save
-  lands, so a failed write keeps the step with its draft and error instead of moving on with sharing still
-  primed on) before the model list, and only
-  while consent is unconfirmed — so neither the intro nor the first project opens on a privacy prompt;
-  skipping on the intro hands the question back to the shell's dialog. The cost is that the intro carries
-  only basic events.
-  It initializes the draft switch on and immediately persists `{ analyticsEnabled: true }`; persistence and
-  broadcast activate the host gate while the dialog stays open. **Done**, Close, Escape, and backdrop persist
-  the current draft with `analyticsConsentConfirmed: true`, so the ordinary result is on. Switching off
-  immediately persists off/confirmed and the resulting config broadcast closes the dialog. Confirmed on/off
-  configurations never mount or prime. Failed persistence leaves the draft and error visible for retry.
-  Until the user flips the switch on this surface, a decision confirmed elsewhere meanwhile (Settings →
-  Privacy, another window) is adopted, not overwritten: the switch shows the saved value and Continue / Done
-  advances without a write — only a choice made here is persisted. Saved
-  decisions survive restarts and change later through Settings. The dialog keeps only the short
-  product-usage copy and shared switch; Settings adds the optional outcomes, report dimensions, and
-  excluded content. Older hosts retain their legacy privacy control without the new consent dialog.
-  **`FeedbackSettings`** is the always-present Feedback pane: **Take the survey** (only while a survey is
-  launched and unfinished) opens the survey window, beside the Discord link and `info@thinkrail.ai`. Settings
-  never draws the questions itself and never calls `feedback.respond`.
-  **`SurveyInvitationDialog`** is the automatic invitation: **Never show again** records `never`, **Not
-  now** and closing record `postpone`, and **Take the survey** opens the window and records `postpone`, so
-  leaving the survey unsent re-invites later. Each action closes the dialog at once; a failed response is a
-  toast, never a trapped modal.
-  **`SurveyWindow`** is the one survey UI. Its first page carries the data notice (what is sent, linked
-  to a random installation ID, no secrets/code/personal data, deletion via `info@thinkrail.ai`; no links)
-  above the first question; `SurveyForm` then draws one question per step (rating points are real radio
-  inputs; selecting Other focuses its text field) with **Continue**, and **Send** on the last. Nothing is sent before Send, closing never calls the
-  host, and the analytics setting plays no part. `SURVEY_CHANGED` reloads the survey and restarts it with a
-  short notice; other refusals stay inline; success shows PostHog's thank-you header or the app's. The form
-  is keyed by survey id, iteration and `language`, so a reload in another language restarts it rather than
-  mixing languages, and Send echoes `survey.language`. A pre-v98 host gets the older submission shape (Other text
-  inline, no `language`) through `surveyDraft`'s `inlineOthers`; while no host is welcomed (disconnected) Send is
-  disabled, so no request is queued and replayed in a shape chosen without knowing the host.
   **`ModelsSettings`** is the **Models** section, visible only at protocol v72 or newer. It re-reads
   `model.default` on open, whenever the live catalog changes (empty included), and after every save — the
   host resolves the saved model and its effort levels against its settled catalog, so a vanished or changed
@@ -1240,11 +1196,10 @@ a project picker, the prompt hero, and the reused
   (blank rows are dropped client-side first so server indexes line up). A pending restart shows
   `settings-environment-restart`; names set at launch carry a "Set at launch" badge. Pure draft helpers
   live in `panels/environmentDraft.ts`; the props-driven `EnvironmentForm` is what tests render. No folder
-  picker: `dialog.selectDirectory` is the project-setup picker and records setup analytics.
+  picker: `dialog.selectDirectory` is the project-setup picker.
   `ProvidersSettings`/`McpSettings`/`AppearanceSettings`/`LineWidthControl`/`ChatSettings`/`TemplatesSettings`/
-  `WorkspacesSettings`/`PrivacySettings`/`ModelsSettings`/`FeedbackSettings`/`ExtensionsSettings`/`EnvironmentSettings`, the onboarding
-  `ConnectProviderDialog`/`CreateProjectDialog`/`OnboardingWizard`, and the app-wide **`SurveyInvitationDialog`** /
-  **`SurveyWindow`** are the panels-owned **integration pieces** (store + transport).
+  `WorkspacesSettings`/`ModelsSettings`/`ExtensionsSettings`/`EnvironmentSettings` and the onboarding
+  `ConnectProviderDialog`/`CreateProjectDialog`/`OnboardingWizard` are the panels-owned **integration pieces** (store + transport).
   `SettingsDialog` receives the Layout section from the
   shell composition root so no panel reaches sideways into shell, and the `LoginDialog` stays presentational
   (`auth` module).

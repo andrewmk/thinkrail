@@ -44,7 +44,6 @@ const isolationEnv = hostEnvironment({
 	THINKRAIL_DATA_DIR: join(root, "data"),
 	PI_CODING_AGENT_DIR: join(root, "agent"),
 	PI_OFFLINE: "1",
-	THINKRAIL_NO_ANALYTICS: "1",
 	CI: "1",
 	THINKRAIL_DESKTOP_READY_FILE: readyPath,
 	THINKRAIL_DESKTOP_CONTROL_FILE: controlPath,

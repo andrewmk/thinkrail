@@ -19,27 +19,6 @@ export class RequestReplayOverflowError extends CodedError {
 	}
 }
 
-export class RequestAbandonedError extends Error {
-	readonly code = "REQUEST_ABANDONED";
-
-	constructor() {
-		super("the page gave up on a request before its handler settled");
-		this.name = "RequestAbandonedError";
-	}
-}
-
-export class AbandonmentReportBudget {
-	private readonly reported = new Set<string>();
-
-	constructor(private readonly allowance = 10) {}
-
-	admit(method: string): boolean {
-		if (this.reported.has(method) || this.reported.size >= this.allowance) return false;
-		this.reported.add(method);
-		return true;
-	}
-}
-
 export class RequestReplayUnretainedError extends Error {
 	constructor(id: string) {
 		super(`request id "${id}" already executed; its response exceeded the retention budget`);

@@ -539,14 +539,7 @@ re-read while a server starts. The state vocabulary and the attention/active pre
   browser per endpoint). The
   ephemeral **`notificationPromptOpen`** plus **`openNotificationPrompt()`** / **`closeNotificationPrompt()`**
   is the client-local render flag for the attention-notification permission preface (cadence/snooze and the
-  trigger live in [[submodule-web-notifications]], never the store). The
-  ephemeral **`surveyInvitationOpen`** plus
-  **`showSurveyInvitation()`** / **`hideSurveyInvitation()`** is the render projection of the host's addressed
-  survey invitation, cleared before each valid welcome. **`surveyWindowOpen`** is the one survey window both
-  the invitation and Settings → Feedback open; **`openSurveyWindow()`** opens it and closes the invitation and
-  Settings in the same update, **`closeSurveyWindow()`** closes it. **`inAppSurvey`** (written by
-  **`setInAppSurvey`**) is the narrowed launched survey the Feedback pane and the window draw. Counts,
-  dismissal and completion stay in host `feedback.json`. The **theme**
+  trigger live in [[submodule-web-notifications]], never the store). The **theme**
   preference state — **`theme: ThemeId`** (the retained opaque fixed choice), **`themeMode: ThemeMode`**,
   and optional **`systemThemePair: SystemThemePair`** — arrives through **`applyConfig(config)`** from
   `server.welcome` / the `settings.changed` broadcast. A welcome from a pre-feature host (or any malformed
@@ -562,7 +555,6 @@ re-read while a server starts. The state vocabulary and the attention/active pre
   `fileLineWidthBounded`** switches, **`customLayoutPresets: LayoutPreset[]`**,
   optional **`defaultModel: WireModel` / `defaultEffort: ThinkingLevel`** for new chats, the picker's
   **`favoriteModels` / `recentModels: WireModel[]`** (defaulting to `[]` so a pre-v77 host reads as "none"),
-  **`analyticsEnabled: boolean`**, **`analyticsConsentConfirmed: boolean`**,
   **`notificationsEnabled: boolean`** (the attention-notification master toggle),
   **`subagentsEnabled: boolean`**, **`subagentMaxConcurrent: number`**, **`disabledExtensions: string[]`**
   (defaulting to `[]` so a pre-v82 host reads as "all on"), **`extensionSettings: ExtensionSettingValues`**
@@ -571,16 +563,14 @@ re-read while a server starts. The state vocabulary and the attention/active pre
   defaulted/validated from the contracts helpers so an older or malformed host snapshot cannot poison
   the store). `terminalWindowsShell` narrows through `isTerminalWindowsShell` and otherwise uses
   `DEFAULT_CONFIG.terminalWindowsShell`; `TerminalSettings` consumes both terminal fields, while terminal
-  spawning remains server-owned — the Terminal, Line width, Chat, shared Layout catalog, Privacy, provider
-  controls, and shell quota read sides. Analytics preference and confirmation default independently to false;
-  the store never upgrades a preference to confirmation. A selector combines host capability, hydrated
-  configuration, and absent confirmation to drive the one first-launch prompt; `selectOnboardingActive`
-holds it (and the survey invitation) while the client-local **`onboardingWizard`** gate
+  spawning remains server-owned — the Terminal, Line width, Chat, shared Layout catalog, provider
+  controls, and shell quota read sides. A selector combines host capability and
+  hydrated configuration to drive the one first-launch prompt; `selectOnboardingActive`
+holds it while the client-local **`onboardingWizard`** gate
 (`pending | shown | hidden`, set by Welcome through `setOnboardingWizard`) is shown — including its done
 screen, after `onboardingDismissed` is already persisted, until a project opens — or still pending on a
 cold-start-shaped store (capable host, not dismissed, no open or recent projects). Project Home reads the same
-selector to hide its Projects rail and pane, so onboarding has the whole window. Persisted preference priming
-  and final choice updates converge through `applyConfig`; the dialog's visual draft remains component-local.
+selector to hide its Projects rail and pane, so onboarding has the whole window.
   **`chatMessageOrder: ChatMessageOrder`** and **`streamingResponseMovement:
   StreamingResponseMovement`** are instead client-local presentation preferences, hydrated together by
   the chat preference seam from host-qualified browser localStorage or the native shell's injected

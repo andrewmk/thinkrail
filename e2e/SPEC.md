@@ -261,7 +261,7 @@ no-fallback for new or reattached chats after Central is removed. There is no le
 affected-chat blocking, or recovery seal to test. Sentinel values in synthetic child output, extension
 diagnostics, and provider routing fields
 are asserted absent from the closed results and rendered settings surface; structural DTO allowlists and
-generic host mapping keep those classes out of WS frames, analytics, logs, and persistence.
+generic host mapping keep those classes out of WS frames, logs, and persistence.
 
 Quota coverage adds test-owned structured recurring values and closed failure tokens—never real Central
 output. It proves the top-bar readout appears only for healthy + enabled Central, polls at the synchronized
@@ -372,23 +372,17 @@ retained live-chat limits versus new-chat metadata, Custom validation and Apply 
 convergence with draft invalidation, sanitized read/write failures with Retry, mobile keyboard use,
 and pre-v76 hiding.
 
-General and private-restart fixtures seed additional analytics off with consent already confirmed, so
-unrelated scenarios stay unblocked. The shared fixture (`global-setup.ts`) also seeds the automatic survey
-invitation as permanently dismissed and the one-time GitHub star ask as already sent: the serial agent lane intentionally accumulates
-accepted prompts across scenarios, while dedicated feedback and `github-star-prompt.spec.ts` coverage injects and
-asserts the addressed channels directly. The cold-start onboarding
-wizard is likewise seeded dismissed (`onboardingDismissed: true`, in the config file and again over the
-settings wire, since the host may have loaded its config first), and only `onboarding.spec.ts` re-arms it
-over the settings wire, restoring it afterwards. The wizard gate decides once per page load, so that spec's
+The shared fixture (`global-setup.ts`) seeds the cold-start onboarding wizard dismissed
+(`onboardingDismissed: true`, in the config file and again over the settings wire, since the host may have
+loaded its config first), and only `onboarding.spec.ts` re-arms it over the settings wire, restoring it
+afterwards. The wizard gate decides once per page load, so that spec's
 cold starts settle the host before the first load: after the reset they wait out a provider-runtime
 replacement still in flight (`jbcentral` `configuring` keeps reporting the previous runtime's providers),
 sign out every stored credential, and fail unless at most ambient env providers remain (those skip). Its
 teardown attempts every cleanup step even when one fails. Before any fixture reset
 deletes transcript storage, it lists and disposes every live session through the public wire; disposal aborts
 and settles an unfinished provider turn first, so a test ending mid-turn cannot recreate a headerless JSONL
-behind the next scenario. Consent tests reset the choice over the real settings wire and cover on-by-default preference priming,
-Done/ordinary-close acceptance, immediate off refusal, persistence failures and retries, confirmed reloads,
-cross-client convergence, prompt priority, and pre-v65 fallback.
+behind the next scenario.
 
 Each scenario's app reset also removes the lane fixture repository's `origin` remote: the topbar's Remote /
 Pull request segments read the shared repo config, so an origin a push scenario added must never reshape a

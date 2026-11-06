@@ -38,10 +38,8 @@ the palette ranks with — kept here so host-side search can rank with the same 
   asked of a byte-only resource), **`RECEIPT_UNKNOWN`** (an undo of a receipt the host no longer
   holds — the ring is 20 deep and dies with the process), and **`UNSUPPORTED_CHANGE`** (the selected
   change is a symlink or mode-only mutation that this byte-oriented write path deliberately refuses), plus
-  the four `feedback.survey.submit` refusals `SURVEY_INVALID`, `SURVEY_UNAVAILABLE`, `SURVEY_CHANGED` and
-  `SURVEY_NOT_SENT`, and `fonts.installed`'s `INSTALLED_FONTS_UNAVAILABLE`: the host's OS font service could
-  not be read, a failure analytics tells apart from a lost connection while the font picker offers Retry for
-  either), so a client can react to one specific failure
+  and `fonts.installed`'s `INSTALLED_FONTS_UNAVAILABLE`: the host's OS font service could not be read,
+  while the font picker offers Retry), so a client can react to one specific failure
   instead of pattern-matching an error message. A failure earns a code only when a client behaves differently
   for it or Error Tracking must tell it apart (it never sees `message`). Two codes exist for the latter:
   **`REQUEST_REPLAY_OVERFLOW`** — the host's replay namespace for this page is full
@@ -438,7 +436,7 @@ the palette ranks with — kept here so host-side search can rank with the same 
   a bare ack, and its detached failure arrives on the additive `review.failed` push (`ReviewFailedPayload`)
   since the review has no chat to carry it. An older client reads the dropped fields as absent, so the pin
   is what lets a client tell "this host has no reviewer chat" from "this host is older" rather than inferring it;
-  **`AppConfig`** (`{ theme, themeMode, systemThemePair?, analyticsEnabled, analyticsConsentConfirmed, terminalReplayKb,
+  **`AppConfig`** (`{ theme, themeMode, systemThemePair?, terminalReplayKb,
   terminalWindowsShell, composerGrowthLimit, chatLineWidth, fileLineWidth, chatLineWidthBounded,
   fileLineWidthBounded, customLayoutPresets, defaultModel?, defaultEffort?, reviewModel?, reviewEffort?,
   favoriteModels, recentModels, reviewAutoFix, agentReviewEnabled, subagentsEnabled, subagentMaxConcurrent,
@@ -481,20 +479,11 @@ the palette ranks with — kept here so host-side search can rank with the same 
   an `ExtensionCatalogEntry` declares — an absent key means the descriptor's `default`, and
   `settings.update { extensionSettings }` merges per key; `customLayoutPresets` is the bounded
   resource-free catalog and is the **only** layout value synchronized by the host; current/default preset
-  and group limits are web-local); `analyticsEnabled` is the additional-data preference and host gate,
-  default `false`, while `analyticsConsentConfirmed` defaults `false` and records completion of the initial
-  choice. `ANALYTICS_CONSENT_PROTOCOL_VERSION` pins this v65 contract so newer clients do not show a consent
-  flow against older hosts that cannot persist it. The initial dialog first writes the enabled preference
-  alone, then completion and the current preference together; Privacy Settings writes both together. An older
-  client's preference-only write cannot create the new confirmation. The installation id remains entirely
-  server-side; basic events are not controlled by either flag, see [[submodule-server-analytics]]) carries
-  it with the **`DEFAULT_CONFIG`** fallback (persisted host-side
+  and group limits are web-local) carries it with the **`DEFAULT_CONFIG`** fallback (persisted host-side
   as `config.json`, delivered in
   `server.welcome`, mutated via `settings.update`). Every new user chat receives the resolved model and
   effort explicitly, so the session agrees with `model.default`; explicit request fields win individually,
   while an effort-only request uses the configured or fallback model. Plan-review subagents keep their own model policy.
-  **`SurveyInvitationResponse`** is the closed `"postpone" | "never"` action accepted from the automatic
-  survey invitation. No usage count, eligibility, dismissal state, or client identity crosses the wire.
   Contracts deliberately exports no theme catalog enum/list/labels: a future manifest can mint an id
   unknown when the host was built, and a client missing it resolves a same-appearance bundled fallback;
   **`SpecGraphNode`/`SpecGraphSnapshot`** — the
@@ -819,25 +808,7 @@ the palette ranks with — kept here so host-side search can rank with the same 
   because values may be secrets; `get` → `HostEnvironmentStatus` with `restartRequired`, `launchOverridden`
   names and the `effectiveAgentDir`; `update` replaces the whole record and returns
   `{ ok: false, issues }` per field/row index instead of saving anything when it is invalid) /
-  **`feedback.respond`** (`{ action: SurveyInvitationResponse }` → ack; persists postpone or the permanent
-  dismissal; neither stops message counting) /
-  **`feedback.survey`** (`{ language? }`, the client's UI language → `{ survey: AppSurvey | null }`; the
-  launched survey named `in-app-feedback` in the PostHog translation that language matches, with
-  `AppSurvey.language` naming it, or the original text without `language`; null when it is off or this id
-  and iteration were already submitted) /
-  **`feedback.survey.submit`** (`SurveySubmitParams { submissionId, surveyId, iteration, language?, answers, others? }` → ack;
-  `language` echoes `AppSurvey.language`; `answers` hold only picked choices (as shown), ratings and open text,
-  while a choice question's typed **Other** text travels in `others`, so it is never read as a choice;
-  one call when the user presses Send, whatever the analytics setting; fails with `SURVEY_INVALID`,
-  `SURVEY_UNAVAILABLE`, `SURVEY_CHANGED` (the survey moved to another id or iteration — the client reloads
-  and restarts) or `SURVEY_NOT_SENT`; `FEEDBACK_SURVEY_PROTOCOL_VERSION` pins both methods and the
-  invitation channel to v97; `SURVEY_TRANSLATIONS_PROTOCOL_VERSION` pins `language` and `others` to v98 —
-  a client sends a pre-v98 host the older shape, Other text inline in `answers` and no `language`, and a
-  submission without `others` is read in that shape) /
-  **`client.reportError`** (`ClientErrorReport { kind: render | window | rejection, type, stack?,
-  boundary?, chunkIds? }` → ack; `chunkIds` maps stack URLs to PostHog source-map chunk ids; a fire-and-forget UI error for host error tracking — the payload is raw and untrusted,
-  the host is the only sanitizer; `CLIENT_ERROR_REPORT_PROTOCOL_VERSION` pins its v90 introduction so a
-  newer client never sends it to an older host) / **`history.search`** (the prompt-recall + conversation-search read; results capped,
+  **`history.search`** (the prompt-recall + conversation-search read; results capped,
   recency-ordered; the messages section is assistant-only — a user-role hit surfaces as a jumpable
   `PromptHit` instead, never a separate `MessageHit`) / the **`review.*` set** — **`get`** (the open
   review + comments, lazily created; re-anchored on read) / **`commentAdd`**/**`commentUpdate`**/
@@ -877,11 +848,7 @@ the palette ranks with — kept here so host-side search can rank with the same 
   other frontends can list it in history without opening local placement) / **`session.deleted`** (workspace +
   session id; a non-replayable domain event broadcast after permanent deletion so every client removes the chat
   and blocks stale hydration) / **`settings.changed`** (the full `AppConfig`, including custom preset definitions, broadcast so every
-  client converges) / **`feedback.interview`** (an empty, addressed invitation sent only to a protocol v97
-  client when the launched in-app survey is eligible; not broadcast, subscribed, or replayed) / **`feedback.githubStar`**
-  (`GithubStarAsk { stars: number | null }`, the addressed one-time GitHub star ask with the host-read star count, sent
-  only to a client at `GITHUB_STAR_PROTOCOL_VERSION`, v103; not
-  broadcast, subscribed, or replayed) / **`provider.login`** — the session-less
+  client converges) / **`provider.login`** — the session-less
   in-app login stream (a `LoginPush`
   per frame, keyed by `loginId`; the sibling of `pi.extensionUi`, since a login runs on the Welcome screen
   before any session exists) / **`provider.changed`** — a data-free invalidation broadcast after a watched

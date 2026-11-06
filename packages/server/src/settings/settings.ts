@@ -36,8 +36,6 @@ const ACCEPTED_UPDATE_KEYS = {
 	theme: true,
 	themeMode: true,
 	systemThemePair: true,
-	analyticsEnabled: true,
-	analyticsConsentConfirmed: true,
 	notificationsEnabled: true,
 	terminalReplayKb: true,
 	terminalWindowsShell: true,
@@ -181,8 +179,6 @@ export function updateConfig(partial: AppConfigUpdate): AppConfig {
 	for (const [name, value] of [
 		["chatLineWidthBounded", runtimeUpdate.chatLineWidthBounded],
 		["fileLineWidthBounded", runtimeUpdate.fileLineWidthBounded],
-		["analyticsEnabled", runtimeUpdate.analyticsEnabled],
-		["analyticsConsentConfirmed", runtimeUpdate.analyticsConsentConfirmed],
 		["notificationsEnabled", runtimeUpdate.notificationsEnabled],
 		["reviewAutoFix", runtimeUpdate.reviewAutoFix],
 		["agentReviewEnabled", runtimeUpdate.agentReviewEnabled],
@@ -213,12 +209,6 @@ export function updateConfig(partial: AppConfigUpdate): AppConfig {
 		throw new Error(
 			`fontWeightOffset must be a multiple of ${FONT_WEIGHT_OFFSET.step} from ${FONT_WEIGHT_OFFSET.min} to ${FONT_WEIGHT_OFFSET.max}`,
 		);
-	}
-	if (
-		runtimeUpdate.analyticsConsentConfirmed !== undefined &&
-		runtimeUpdate.analyticsEnabled === undefined
-	) {
-		throw new Error("analytics consent must include the sharing preference");
 	}
 	const {
 		defaultModel,
@@ -309,14 +299,6 @@ export function updateConfig(partial: AppConfigUpdate): AppConfig {
 		throw new Error("systemThemePair must contain light and dark theme ids");
 	}
 	const current = getConfig();
-	if (
-		runtimeUpdate.analyticsEnabled === true &&
-		!current.analyticsEnabled &&
-		current.analyticsConsentConfirmed &&
-		runtimeUpdate.analyticsConsentConfirmed === undefined
-	) {
-		throw new Error("enabling additional analytics requires an explicit confirmation");
-	}
 	const nextThemeMode = themeMode ?? (theme !== undefined ? "fixed" : current.themeMode);
 	const nextSystemThemePair =
 		systemThemePair === undefined

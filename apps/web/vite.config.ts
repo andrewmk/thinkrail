@@ -3,7 +3,6 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { posthogSourceMapUpload, sourceMapRelease } from "./sourceMapUpload";
 
 function envPort(name: string): number | undefined {
 	const raw = process.env[name];
@@ -19,14 +18,8 @@ const webPort = envPort("THINKRAIL_WEB_PORT");
 
 export default defineConfig(({ mode }) => {
 	const profile = mode === "profile";
-	const release = profile ? null : sourceMapRelease();
 	return {
-		plugins: [
-			react(),
-			babel({ presets: [reactCompilerPreset()] }),
-			tailwindcss(),
-			...(release ? [posthogSourceMapUpload(release)] : []),
-		],
+		plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
 		resolve: {
 			alias: [
 				{ find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
@@ -47,8 +40,6 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		worker: { format: "es" },
-		build: profile
-			? { outDir: "dist-profile", minify: false }
-			: { outDir: "dist", ...(release ? { sourcemap: "hidden" as const } : {}) },
+		build: profile ? { outDir: "dist-profile", minify: false } : { outDir: "dist" },
 	};
 });

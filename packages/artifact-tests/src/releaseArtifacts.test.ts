@@ -158,7 +158,7 @@ function collect(root: string, target: string, channel: string) {
 	});
 }
 
-function stampIdentity(channel: string, key: string, extra: Record<string, string> = {}) {
+function stampIdentity(channel: string) {
 	const script = action.runs.steps.find(
 		(step) => step.name === "Stamp shared release identity",
 	)?.run;
@@ -176,8 +176,6 @@ function stampIdentity(channel: string, key: string, extra: Record<string, strin
 			PATH: `${bin}:${process.env.PATH}`,
 			VERSION: "1.2.3",
 			CHANNEL: channel,
-			POSTHOG_PROJECT_KEY: key,
-			...extra,
 		},
 		stdout: "pipe",
 		stderr: "pipe",
@@ -189,54 +187,23 @@ function stampIdentity(channel: string, key: string, extra: Record<string, strin
 	};
 }
 
-test("release stamping bakes the CI-supplied analytics key without echoing it", () => {
-	const { result, stamped } = stampIdentity("stable", "phc_release");
+test("release stamping writes version, channel, and commit only", () => {
+	const { result, stamped } = stampIdentity("stable");
 	expect(result.exitCode).toBe(0);
 	expect(stamped).toBe(
 		[
 			'export const version = "1.2.3";',
 			'export const channel = "stable";',
 			'export const commit = "abc1234";',
-			'export const posthogProjectKey = "phc_release";',
 			"",
 		].join("\n"),
 	);
-	expect(`${result.stdout}${result.stderr}`).not.toContain("phc_release");
 });
 
-test.each([
-	{ channel: "stable", key: "" },
-	{ channel: "nightly", key: "not-a-key" },
-	{ channel: "dev", key: "phc_release" },
-])("release stamping fails closed for %j", ({ channel, key }) => {
-	const { result, stamped } = stampIdentity(channel, key);
+test.each(["dev", "canary", ""] as const)("release stamping fails closed for %j", (channel) => {
+	const { result, stamped } = stampIdentity(channel);
 	expect(result.exitCode).not.toBe(0);
 	expect(stamped).toBeUndefined();
-});
-
-test("a source-map upload key without its project id fails closed before stamping", () => {
-	const missing = stampIdentity("stable", "phc_release", { POSTHOG_CLI_API_KEY_SET: "true" });
-	expect(missing.result.exitCode).not.toBe(0);
-	expect(missing.stamped).toBeUndefined();
-	const paired = stampIdentity("stable", "phc_release", {
-		POSTHOG_CLI_API_KEY_SET: "true",
-		POSTHOG_CLI_PROJECT_ID: "1",
-	});
-	expect(paired.result.exitCode).toBe(0);
-	expect(
-		stampIdentity("stable", "phc_release", { POSTHOG_CLI_API_KEY_SET: "false" }).result.exitCode,
-	).toBe(0);
-});
-
-test("source-map credentials reach only the web and desktop build steps", () => {
-	const credentialed = action.runs.steps
-		.filter((step) => step.env && "POSTHOG_CLI_API_KEY" in step.env)
-		.map((step) => step.name);
-	expect(credentialed).toEqual([
-		"Build web UI",
-		"Build and smoke desktop app",
-		"Package desktop installer",
-	]);
 });
 
 test("the Electrobun toolchain downloads with retries before the first desktop build", () => {

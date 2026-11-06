@@ -140,70 +140,20 @@ channel fan-out, and the process-boot wrapper both launchers share.
   looking" signal; `stopWatch` in `workspace.remove`'s fast path beside `evictSpecIndex`;
   `stopAllWatches()` in `stop()`), `stopJbcentralRuntime()` and `cancelAllLogins()` in `stop()` before the
   socket close,
-  an optional boot-time `openProject(projectPath)` (best-effort — a launcher convenience), the
-  **analytics wiring** (`initializeAnalytics` at boot from launcher provenance, destination, and per-run
-  additional-data suppression; startup grants the additional tier only when `analyticsEnabled &&
-  analyticsConsentConfirmed`. After boot, the settings publisher still broadcasts every merged config but
-  changes the analytics grant only when its successful applied update explicitly carries `analyticsEnabled`,
-  so unrelated writes preserve the current grant and the dialog's preference prime can enable it.
-  `analyticsConsentConfirmed` controls the web prompt lifecycle. Its unconfirmed on-prime may enable ordinary
-  additional capture, but browser attribution starts only from confirmed-on state: directly after the final
-  applied dialog update (the UI is ready), or for a saved choice only through the launcher's explicit
-  `RunningServer.startAttributionClaim()` readiness signal after normal UI readiness. Revocation cancels the
-  claim generation. Basic
-  events remain on in human runs. Consent changes clear additional-event correlation so re-enabling cannot
-  reconstruct pre-consent work; campaign-only enrichment is inactive while off and restored from its strict
-  server record when on without retrying a consumed claim.
-  `shutdownAnalytics()` remains a best-effort drain in `stop()` and awaited by graceful shutdown;
-  every capture site lives here, including the existing basic events: `chat_started` in `session.create` (the host's new-chat
-  resolution decides `none` for a chat created with no usable model instead of pi's placeholder; otherwise
-  the created session's actual model is reported), `message_sent` (via the
-  local `trackSend(mode, text)`) after an **accepted** `session.prompt`/`session.steer`/`session.followUp`
-  (`prompt`/`steer`/`follow_up`; skipped when contracts' `isControlMessage(text)` — the client's TODO
-  wake-nudge rides the same methods and is not a user message; `session.respondToTool` is a tool reply,
-  not a message either),
-  `provider_login` from the
-  login-publisher tee's terminal `success` frames with the method (`oauth`/`api-key`) looked up from
-  `loginAnalytics.ts` — the loginId→method map the `provider.loginStart` handler records (and
-  `provider.loginCancel` clears; an unknown loginId tracks nothing, fails closed) — +
-  a successful `provider.jbcentralConnect`→`applied` (failed actions never count) — per
-  `submodule-server-analytics`,
-  feature modules never track). Basic login/chat/send events add the closed auth category from their own
-  session/login generation, never from a later global runtime; sends snapshot provider/auth before dispatch.
-  Opaque-loader provider membership identifies Central without opening its auth/configuration surface.
-  Additional setup/run/task/review/PR observations use the closed triggers in
-  [[submodule-server-analytics]], with transient consent-scoped correlation and task-artifact reconciliation.
-  Host alone mediates these events; analytics initialization emits the packaged-install lifecycle event,
-  while no provider-change capture exists.
-  Setup observes existing read results, never triggers provider work; only explicit setup mutations count
-  (`dialog.selectDirectory` is one: `directory_pick` with a null path as `cancelled`; `project.open` maps the
-  projects module's `NOT_GIT` / `ALREADY_OPEN` coded errors to the closed reasons, everything else `unknown`).
-  Run timing starts at canonical `agent_start`, with local send intent recorded before calling pi (not
-  after `ackSend`); unproven provenance stays unknown and retries remain one cycle until `agent_settled`.
-  Accepted queued origins survive send resolution until canonical cycle observation; rejected sends do not
-  contribute. Consent clearing preserves pre-grant cycle markers, while settlement, queue clearing,
-  session deletion and full host reset release their corresponding transient intent state.
-  Task observation reads reduced group state synchronously through the existing pi-free `TodoStore` /
-  `groupStatus` boundary before a completion-capable mutation, then reads artifacts after reconciliation;
-  wire edits wait for existing artifact work rather than create new Git writes for telemetry.
-  Completion evidence and deduplication wait for the workspace's existing reconciliation queue to converge,
-  including replacement passes after plan drift, and retain the mutation's original consent grant.
-  Empty/newly-hydrated groups and completion by deletion do not count. These memory-only observations
-  retain a grant's capture before asynchronous work and never replay across revocation.
+  an optional boot-time `openProject(projectPath)` (best-effort — a launcher convenience).
   `stop()` → immediate agent-session cleanup, then `persistTerminalSessions()` **before**
   `closeAllTerminals()`, then watcher/socket disposal and `restoreSeamDefaults()`: every resolver,
   handler and publisher `createServer` installed is scoped to the server's lifetime and returns to its
   module default, so a later server in the same process (the unit suite boots many) never inherits a
   stopped one's policy or publish path; `shutdown()` memoizes one asynchronous graceful
-  path: bounded `settleSessionsForShutdown()` + awaited `shutdownAnalytics()` + `stopWorkspaceCreations()`
+  path: bounded `settleSessionsForShutdown()` + `stopWorkspaceCreations()`
   (running checkouts are killed so the next start reports them `interrupted`) first, then
   `turnTracker.drain()` for the receipts those settlements started, then `stop()`). The
   bounded settle includes hidden delegation children even when their parent is
   idle, plus child cascades already started by a concurrent removal, so graceful quit does not let a
   background child lose its terminal abort/tool result; `crashLog.ts` (`installCrashLog` — the `uncaughtException`/`unhandledRejection` report
-  appended to `<dataDir>/logs/crash.log` and echoed to stderr, then — for the first fault only — an awaited,
-  ≤ 1 s analytics `reportFatalError` (tagged with the crash kind) before `exit(1)`; later faults in that window are still appended but
-  neither re-report nor re-exit: in-process pi means such a
+  appended to `<dataDir>/logs/crash.log` and echoed to stderr, then — for the first fault only —
+  `exit(1)`; later faults in that window are still appended but never re-exit: in-process pi means such a
   fault is the whole host's, and a launcher started without a terminal otherwise loses its only trace.
   Never a recovery, and never installed under `NODE_ENV=test` — a unit-test process reports its own
   faults. It renders the throw via the `log` module's `describeError`, so crash reports and log lines
@@ -214,8 +164,7 @@ channel fan-out, and the process-boot wrapper both launchers share.
   (`applyHostEnvironment`, before any `getAgentDir()` reader), pre-warm the same Central watcher/runtime
   initialization before choosing the serving port, await `createServer` (which idempotently enforces
   runtime bootstrap for low-level embedders), and write the `listening on` info line (see
-  `submodule-server-log`); `reportDesktopError(error, scope)` is the desktop launcher's handled-error door
-  into analytics (source `desktop`). Its
+  `submodule-server-log`). Its
   SIGINT/SIGTERM handlers await that same shutdown before process exit. Settling aborts streaming sessions
   and waits bounded so pi persists their "Operation aborted" tool results and transcripts land paired,
   except a session blocked on `ask_user_question`: shutdown deliberately leaves that call dangling and the
@@ -225,11 +174,7 @@ channel fan-out, and the process-boot wrapper both launchers share.
   params are not shape-validated at runtime. The registry includes `workspace.rename` as the direct manual door into
   `renameWorkspace(id, name)` (no `branch` option) — the workspaces module changes only the
   display label, persists, and publishes it, so the handler never mutates Git, emits, or patches a client
-  separately; `project.rename` likewise delegates to the projects module's `renameProject`, which owns validation and the push. `client.reportError` hands the untrusted browser report to analytics' `reportClientError` (the
-  only sanitizer) and always acks. Error tracking also rides two `server.ts` seams: every failed WS request
-  is reported with its registered method (CodedErrors included), and `observeLoggedErrors` routes host
-  `log.warn/error(msg, err)` calls as `host_logged` — so host diagnostics that carry an error go through
-  the logger, never `console.*`. The host's `resolveNewChatModel` composes AppConfig settings with pi's global default model, the agent's settled available
+  separately; `project.rename` likewise delegates to the projects module's `renameProject`, which owns validation and the push. The host's `resolveNewChatModel` composes AppConfig settings with pi's global default model, the agent's settled available
   model list and Pi thinking clamp; `model.default`, `session.create`, and newly-created review chats share
   that resolver, and creation passes its model and effort explicitly. A `session.create` that **named** a
   model and every `session.setModel` also record the resolved model as recent through `settings`'
@@ -622,25 +567,6 @@ channel fan-out, and the process-boot wrapper both launchers share.
   host restart and does not shut down or relaunch the unsupervised process; failure permits retry and exposes no
   child output or arbitrary diagnostic. Discovery failures preserve known state, shutdown makes late results
   inert, and the host never learns feed, installer, command, path, channel, or version selection.
-- **Survey invitation delivery:** the three user-send handlers share one post-`ackSend` path that
-  filters control traffic once, tracks anonymous `message_sent`, and records the local feedback count. The
-  feedback module's injected publisher maps an eligible claim to addressed `feedback.interview` delivery
-  for that request's opaque client key only when its socket-advertised protocol version supports the channel;
-  delivery failure or final client reap after the reconnect grace releases the claim, while a transient
-  reconnect retains and re-delivers it after `server.welcome`. A host restart has no claim to re-deliver, and
-  the welcome clears the frontend's stale popup projection. Popup `feedback.respond` actions are ordinary
-  replay-safe requests and never alter the Settings link. A second injected publisher (`canAsk` + `ask`, both
-  true only for a v103+ socket) sends the one-time star ask (`GithubStarAsk`, the star count the feedback module
-  read) as addressed `feedback.githubStar` to the same client key.
-- **Survey submission:** after `initializeAnalytics` the host configures the feedback survey source from
-  analytics' `surveyEndpoint()`, so unkeyed, CI and test runs never fetch and `THINKRAIL_POSTHOG_HOST`
-  applies. A source dev host fetches only when `THINKRAIL_DEV_POSTHOG=1` and `THINKRAIL_POSTHOG_PROJECT_KEY`
-  are both set. `feedback.survey.submit` re-reads the survey list (no cache), refuses with `SURVEY_INVALID`,
-  `SURVEY_UNAVAILABLE` (none launched, or already completed) or `SURVEY_CHANGED` (another id or
-  iteration, or the translation the user saw is gone), hands the built payload to `captureSurveyResponse`, and records completion only when that
-  capture is accepted (`SURVEY_NOT_SENT` otherwise, and when the list cannot be read). Once accepted the
-  answer counts as sent: a failed completion write is logged, never reported as unsent, so a retry cannot
-  send the answers twice.
 - **Chat titles:** `session.rename` resolves `workspaceId` to its cwd and delegates title validation plus the
   unconditional durable write to `agent`; it never patches one client directly. Automatic titles come only
   from the agent's `set_title` (above); sends carry no naming work. Both manual and automatic
@@ -648,11 +574,8 @@ channel fan-out, and the process-boot wrapper both launchers share.
   titled `session.state` record (see Session-state composition), with `session.list` repair; no new push
   channel exists.
 
-`RunningServer.startAttributionClaim()` is the explicit launcher-readiness signal and rechecks the saved
-enabled/confirmed choice before entering analytics attribution.
-
 - **Public surface (barrel):** `createServer`, `CreateServerOptions`, `RunningServer`, `bootHost`,
-  `BootHostOptions`, `BootedHost`, `BuildKind`, `reportDesktopError`.
+  `BootHostOptions`, `BootedHost`.
 - **Allowed deps:** `contracts` (`PROTOCOL_VERSION`, feature-introduction versions, `WS_CHANNELS`); `shared` (`freePort`, `shellEnv` — for
   `boot.ts`; `codedError`); `persistence` (`dataDir` — where `crashLog.ts` writes); `pi-todos/core` (reduced synchronous
   task snapshots, with group status still core-owned); the feature modules it composes (per the parent dependency graph, incl. `fs`'s

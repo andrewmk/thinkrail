@@ -10,12 +10,10 @@ import {
 } from "./domain";
 import {
 	AGENT_REVIEW_SETTING_PROTOCOL_VERSION,
-	ANALYTICS_CONSENT_PROTOCOL_VERSION,
 	ASK_DISCUSS_PROTOCOL_VERSION,
 	BRANCH_STATUS_PROTOCOL_VERSION,
 	CHANGE_MUTATIONS_PROTOCOL_VERSION,
 	CHAT_RESOURCES_PROTOCOL_VERSION,
-	CLIENT_ERROR_REPORT_PROTOCOL_VERSION,
 	CONTEXT_WINDOW_SETTINGS_PROTOCOL_VERSION,
 	CUSTOM_ENDPOINT_ID_PREFIX,
 	CUSTOM_ENDPOINTS_PROTOCOL_VERSION,
@@ -24,9 +22,7 @@ import {
 	DEFAULT_MODEL_PROTOCOL_VERSION,
 	EXTENSION_CATALOG_PROTOCOL_VERSION,
 	EXTENSION_SETTINGS_PROTOCOL_VERSION,
-	FEEDBACK_SURVEY_PROTOCOL_VERSION,
 	FONTS_PROTOCOL_VERSION,
-	GITHUB_STAR_PROTOCOL_VERSION,
 	HOST_ENVIRONMENT_PROTOCOL_VERSION,
 	HOST_UPDATE_RUN_PROTOCOL_VERSION,
 	isBackgroundCommandCompletionMessage,
@@ -58,7 +54,6 @@ import {
 	SESSION_TITLE_MAX_LENGTH,
 	SUBAGENT_CONCURRENCY_PROTOCOL_VERSION,
 	SUBAGENT_SETTINGS_PROTOCOL_VERSION,
-	SURVEY_TRANSLATIONS_PROTOCOL_VERSION,
 	THEME_SYSTEM_PROTOCOL_VERSION,
 	TODO_REVIEW_FIX_CUSTOM_TYPE,
 	TOOL_RESPONSE_CUSTOM_TYPE,
@@ -110,11 +105,6 @@ test("host update execution advances the additive lifecycle protocol", () => {
 	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(HOST_UPDATE_RUN_PROTOCOL_VERSION);
 	expect(WS_CHANNELS.hostUpdateAvailable).toBe("host.updateAvailable");
 	expect(WS_METHODS.hostUpdate).toBe("host.update");
-});
-
-test("explicit analytics consent is available from protocol v65", () => {
-	expect(ANALYTICS_CONSENT_PROTOCOL_VERSION).toBe(65);
-	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(ANALYTICS_CONSENT_PROTOCOL_VERSION);
 });
 
 test("session rename is versioned and bounded", () => {
@@ -279,12 +269,6 @@ test("the stored host environment is pinned to v91", () => {
 	expect(WS_METHODS.environmentUpdate).toBe("environment.update");
 });
 
-test("client error reports are pinned to v90", () => {
-	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(CLIENT_ERROR_REPORT_PROTOCOL_VERSION);
-	expect(CLIENT_ERROR_REPORT_PROTOCOL_VERSION).toBe(90);
-	expect(WS_METHODS.clientReportError).toBe("client.reportError");
-});
-
 test("project rename is pinned to v85", () => {
 	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(PROJECT_RENAME_PROTOCOL_VERSION);
 	expect(PROJECT_RENAME_PROTOCOL_VERSION).toBe(85);
@@ -329,19 +313,6 @@ test("project create and the onboarding dismissal are pinned to v94", () => {
 	expect(WS_METHODS.projectCreate).toBe("project.create");
 	expect(WS_METHODS.providerDetect).toBe("provider.detect");
 	expect(DEFAULT_CONFIG.onboardingDismissed).toBe(false);
-});
-
-test("the GitHub star ask is pinned to v103", () => {
-	expect(GITHUB_STAR_PROTOCOL_VERSION).toBe(103);
-	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(GITHUB_STAR_PROTOCOL_VERSION);
-	expect(WS_CHANNELS.feedbackGithubStar).toBe("feedback.githubStar");
-});
-
-test("in-app surveys are pinned to v97", () => {
-	expect(FEEDBACK_SURVEY_PROTOCOL_VERSION).toBe(97);
-	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(FEEDBACK_SURVEY_PROTOCOL_VERSION);
-	expect(WS_METHODS.feedbackSurvey).toBe("feedback.survey");
-	expect(WS_METHODS.feedbackSurveySubmit).toBe("feedback.survey.submit");
 });
 
 test("repository cloning and cancellation are registered", () => {
@@ -563,11 +534,6 @@ describe("tool response guards", () => {
 			}),
 		).toBeNull();
 	});
-});
-
-test("survey translations and separate Other text are pinned to v98", () => {
-	expect(SURVEY_TRANSLATIONS_PROTOCOL_VERSION).toBe(98);
-	expect(PROTOCOL_VERSION).toBeGreaterThanOrEqual(SURVEY_TRANSLATIONS_PROTOCOL_VERSION);
 });
 
 test("provider warnings are pinned to v99", () => {

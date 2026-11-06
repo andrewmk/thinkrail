@@ -75,14 +75,13 @@ re-opened transcripts provider-valid.
     configuration values. The allowlist stays the full pre-opaque set: a novel Central id was never in it
     and so never becomes a row, while a replaced built-in (`anthropic`, `openai`, …) stays visible and
     auth attributes it to Central by intersecting the two sets. (Subtracting the opaque set from the allowlist
-    — briefly done for analytics attribution — made every Central-routed provider vanish from the Providers
-    section; the two facts must stay separate.) Thus auth never inspects or emits Central's provider
+    made every Central-routed provider vanish from the Providers section; the two facts must stay separate.) Thus auth never inspects or emits Central's provider
     configuration, while an add/remove/replace can never drop process-local provider registrations. The
     initializer must be configured before the first generation and runs for every candidate. The path is the
     only artifact fact this module receives;
     it never reads, parses, hashes, snapshots, logs, copies, or serves the file. Initializer/extension/loader/
     provider failures discard the candidate and collapse to a closed `load-failed` outcome; raw diagnostics
-    never reach `pi.extensionUi`, the wire, logs, analytics, persistence, or snapshots. Auth owns file watching,
+    never reach `pi.extensionUi`, the wire, logs, persistence, or snapshots. Auth owns file watching,
     coalescing, and stale-candidate rejection; agent only prepares and activates a generation.
 
     `getSessionRuntimeGeneration` exposes a live session's retained generation for synchronous host metadata

@@ -1,6 +1,5 @@
 import type {
 	AppConfig,
-	AppSurvey,
 	ComposerGrowthLimit,
 	ExtUiRequest,
 	FontChoice,
@@ -421,8 +420,6 @@ export const SettingsSection = {
 	Templates: "templates",
 	Review: "review",
 	Notifications: "notifications",
-	Privacy: "privacy",
-	Feedback: "feedback",
 	Extensions: "extensions",
 	Environment: "environment",
 } as const;
@@ -1085,9 +1082,6 @@ interface AppState {
 	unheldLoginFrame: LoginPush | null;
 	settingsOpen: boolean;
 	settingsSection: SettingsSection;
-	surveyInvitationOpen: boolean;
-	surveyWindowOpen: boolean;
-	inAppSurvey: AppSurvey | null;
 	notificationPromptOpen: boolean;
 	searchOpen: boolean;
 	searchSession: number;
@@ -1095,8 +1089,6 @@ interface AppState {
 	theme: ThemeId;
 	themeMode: ThemeMode;
 	systemThemePair: SystemThemePair | undefined;
-	analyticsEnabled: boolean;
-	analyticsConsentConfirmed: boolean;
 	notificationsEnabled: boolean;
 	subagentsEnabled: boolean;
 	subagentMaxConcurrent: number;
@@ -1435,11 +1427,6 @@ interface AppState {
 	openSettings: (section?: SettingsSection) => void;
 	closeSettings: () => void;
 	setSettingsSection: (section: SettingsSection) => void;
-	showSurveyInvitation: () => void;
-	hideSurveyInvitation: () => void;
-	openSurveyWindow: () => void;
-	closeSurveyWindow: () => void;
-	setInAppSurvey: (survey: AppSurvey | null) => void;
 	openNotificationPrompt: () => void;
 	closeNotificationPrompt: () => void;
 	openSearch: () => void;
@@ -1483,14 +1470,6 @@ function configPatch(config: AppConfig) {
 	return {
 		...themePreference,
 		systemThemePair: themePreference.systemThemePair,
-		analyticsEnabled:
-			typeof config.analyticsEnabled === "boolean"
-				? config.analyticsEnabled
-				: DEFAULT_CONFIG.analyticsEnabled,
-		analyticsConsentConfirmed:
-			typeof config.analyticsConsentConfirmed === "boolean"
-				? config.analyticsConsentConfirmed
-				: DEFAULT_CONFIG.analyticsConsentConfirmed,
 		notificationsEnabled:
 			typeof config.notificationsEnabled === "boolean"
 				? config.notificationsEnabled
@@ -2401,9 +2380,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 	unheldLoginFrame: null,
 	settingsOpen: false,
 	settingsSection: SettingsSection.Providers,
-	surveyInvitationOpen: false,
-	surveyWindowOpen: false,
-	inAppSurvey: null,
 	notificationPromptOpen: false,
 	searchOpen: false,
 	searchSession: 0,
@@ -2411,8 +2387,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 	theme: DEFAULT_CONFIG.theme,
 	themeMode: DEFAULT_CONFIG.themeMode,
 	systemThemePair: DEFAULT_CONFIG.systemThemePair,
-	analyticsEnabled: DEFAULT_CONFIG.analyticsEnabled,
-	analyticsConsentConfirmed: DEFAULT_CONFIG.analyticsConsentConfirmed,
 	notificationsEnabled: DEFAULT_CONFIG.notificationsEnabled,
 	subagentsEnabled: DEFAULT_CONFIG.subagentsEnabled,
 	subagentMaxConcurrent: DEFAULT_CONFIG.subagentMaxConcurrent,
@@ -4565,13 +4539,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 	closeSearch: () => set((state) => (state.searchOpen ? { searchOpen: false } : state)),
 	setDoubleShiftSearch: (doubleShiftSearch) =>
 		set((state) => (state.doubleShiftSearch === doubleShiftSearch ? state : { doubleShiftSearch })),
-	showSurveyInvitation: () =>
-		set((state) => (state.surveyInvitationOpen ? state : { surveyInvitationOpen: true })),
-	hideSurveyInvitation: () => set({ surveyInvitationOpen: false }),
-	openSurveyWindow: () =>
-		set({ surveyWindowOpen: true, surveyInvitationOpen: false, settingsOpen: false }),
-	closeSurveyWindow: () => set({ surveyWindowOpen: false }),
-	setInAppSurvey: (survey) => set({ inAppSurvey: survey }),
 	setChatMessageOrder: (chatMessageOrder) => set({ chatMessageOrder }),
 	setStreamingResponseMovement: (streamingResponseMovement) => set({ streamingResponseMovement }),
 	setChatPreferences: (chatMessageOrder, streamingResponseMovement) =>

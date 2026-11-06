@@ -62,7 +62,6 @@ describe("settingsNavGroups", () => {
 					SettingsSection.Github,
 					SettingsSection.Extensions,
 					SettingsSection.Notifications,
-					SettingsSection.Privacy,
 					SettingsSection.Updates,
 				],
 			],
@@ -100,7 +99,6 @@ describe("settingsNavGroups", () => {
 		const available = ids(LATEST, true);
 		expect(available).not.toContain(SettingsSection.Review);
 		expect(available).not.toContain(SettingsSection.LineWidth);
-		expect(available).not.toContain(SettingsSection.Feedback);
 	});
 
 	test("groups left without an available section disappear", () => {
@@ -144,16 +142,6 @@ describe("resolveSettingsSection", () => {
 		for (const id of ids(LATEST, true)) expect(resolveSettingsSection(id, groups)).toBe(id);
 	});
 
-	test("Feedback is always resolvable", () => {
-		for (const version of [LATEST, 1, null]) {
-			const groups = settingsNavGroups(version, false);
-			expect(resolveSettingsSection(SettingsSection.Feedback, groups)).toBe(
-				SettingsSection.Feedback,
-			);
-		}
-		expect(resolveSettingsSection(SettingsSection.Feedback, [])).toBe(SettingsSection.Feedback);
-	});
-
 	test("unavailable sections fall back to Appearance", () => {
 		const old = settingsNavGroups(1, false);
 		for (const gated of GATED) {
@@ -178,10 +166,12 @@ describe("resolveSettingsSection", () => {
 				label: "settings.nav.group.system",
 				sections: settingsNavGroups(LATEST, true)
 					.flatMap((g) => g.sections)
-					.filter((s) => s.id === SettingsSection.Privacy),
+					.filter((s) => s.id === SettingsSection.Notifications),
 			},
 		];
-		expect(resolveSettingsSection(SettingsSection.Models, groups)).toBe(SettingsSection.Privacy);
+		expect(resolveSettingsSection(SettingsSection.Models, groups)).toBe(
+			SettingsSection.Notifications,
+		);
 		expect(resolveSettingsSection(SettingsSection.Models, [])).toBe(SettingsSection.Appearance);
 	});
 });

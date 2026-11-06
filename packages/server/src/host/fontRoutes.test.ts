@@ -9,7 +9,6 @@ import {
 	WS_CHANNELS,
 } from "@thinkrail/contracts";
 import { configurePiRuntime, configurePiRuntimeFactory } from "../agent";
-import { resetAnalyticsForTests } from "../analytics";
 import { resetJbcentralStateForTests } from "../auth";
 import { fontsDir, MAX_FONT_FILE_BYTES, MAX_FONT_FILES, readUserFonts } from "../fonts";
 import { buildTestCollection, buildTestFont } from "../fonts/testFonts";
@@ -192,7 +191,7 @@ test("the host routes /fonts/ and nudges only sockets that speak the fonts proto
 	const sockets: WebSocket[] = [];
 	let server: RunningServer | undefined;
 	try {
-		server = await createServer({ port: 0, host: "127.0.0.1", analytics: { mute: true } });
+		server = await createServer({ port: 0, host: "127.0.0.1" });
 		const base = `127.0.0.1:${server.port}`;
 		const put = await fetch(`http://${base}/fonts/Wired.ttf`, {
 			method: "PUT",
@@ -249,7 +248,6 @@ test("the host routes /fonts/ and nudges only sockets that speak the fonts proto
 	} finally {
 		for (const socket of sockets) socket.close();
 		await server?.shutdown();
-		resetAnalyticsForTests();
 		resetConfigCache();
 		await resetJbcentralStateForTests();
 		configurePiRuntimeFactory();

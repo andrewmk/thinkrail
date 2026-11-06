@@ -126,7 +126,7 @@ ourselves and never surface a credential value over the wire.
       credential operation per provider at a time, so a login abandoned at a prompt (tab closed or
       reloaded, never cancelled) would otherwise park every later attempt behind it on "Working…" until
       the host restarts. The superseded login is cancelled, reported through the optional
-      `onSuperseded(loginId)` callback (the host drops its analytics entry), and gets a terminal `error`
+      `onSuperseded(loginId)` callback, and gets a terminal `error`
       frame, so another client still showing it stops waiting; the web store never opens a dialog from a
       terminal frame for a login it does not hold.
     - `logoutProvider(id)` — `runtime.logout` (refreshes internally), then the `setLogoutPublisher` seam

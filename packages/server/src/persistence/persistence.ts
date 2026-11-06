@@ -24,32 +24,12 @@ import {
 	type WorkspaceCreation,
 	type WorkspaceKickoff,
 } from "@thinkrail/contracts";
-import {
-	claimBrowserAttributionAttemptIn,
-	readAcquisitionIn,
-	replaceAcquisitionWithTerminalMarkerIn,
-	saveAcquisitionIn,
-} from "./attribution";
-import { type AcquisitionRecord, isRecord } from "./attributionProtocol";
-import { claimAppInstalledIn, ensureInstallationIn, type InstallationRecord } from "./installation";
-
-export {
-	type AcquisitionRecord,
-	ATTRIBUTION_LIFETIME_MS,
-	ATTRIBUTION_MAX_POLLS,
-	ATTRIBUTION_ORIGIN,
-	ATTRIBUTION_POLL_INTERVAL_MS,
-	type AttributionTouch,
-	claimIdPattern,
-	hasExactKeys,
-	isRecord,
-	parseRedeemedAttribution,
-	type RedeemedAttribution,
-} from "./attributionProtocol";
-export type { InstallationRecord } from "./installation";
-
 export function dataDir(): string {
 	return resolve(process.env.THINKRAIL_DATA_DIR ?? join(homedir(), ".thinkrail"));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function storedDirectory(path: string): string {
@@ -380,11 +360,6 @@ export function loadConfig(): AppConfig {
 	return {
 		...extensions,
 		...normalizeThemePreference(value),
-		analyticsEnabled:
-			typeof value.analyticsEnabled === "boolean"
-				? value.analyticsEnabled
-				: DEFAULT_CONFIG.analyticsEnabled,
-		analyticsConsentConfirmed: value.analyticsConsentConfirmed === true,
 		notificationsEnabled:
 			typeof value.notificationsEnabled === "boolean"
 				? value.notificationsEnabled
@@ -473,28 +448,4 @@ export function loadHostEnvironment(): HostEnvironment {
 
 export function saveHostEnvironment(environment: HostEnvironment): void {
 	writeJsonAtomic("environment.json", environment, 0o600);
-}
-
-export function ensureInstallation(): InstallationRecord {
-	return ensureInstallationIn(dataDir());
-}
-
-export function claimAppInstalled(): boolean {
-	return claimAppInstalledIn(dataDir());
-}
-
-export function readAcquisition(now = Date.now()): AcquisitionRecord | undefined {
-	return readAcquisitionIn(dataDir(), now);
-}
-
-export function claimBrowserAttributionAttempt(): boolean {
-	return claimBrowserAttributionAttemptIn(dataDir());
-}
-
-export function saveAcquisition(record: AcquisitionRecord): void {
-	saveAcquisitionIn(dataDir(), record);
-}
-
-export function replaceAcquisitionWithTerminalMarker(): void {
-	replaceAcquisitionWithTerminalMarkerIn(dataDir());
 }

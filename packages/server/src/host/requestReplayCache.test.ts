@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { errorCodeOf } from "@thinkrail/shared/codedError";
 import {
-	AbandonmentReportBudget,
 	heaviestReplayMethod,
 	RequestReplayCache,
 	RequestReplayConflictError,
@@ -320,15 +319,6 @@ describe("request replay cache", () => {
 		await run;
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(cache.clearClient("page")).toBe(true);
-	});
-
-	test("abandonment reports admit each method once and stop at a fixed allowance", () => {
-		const budget = new AbandonmentReportBudget(2);
-		expect(budget.admit("session.resources")).toBe(true);
-		expect(budget.admit("session.resources")).toBe(false);
-		expect(budget.admit("git.status")).toBe(true);
-		expect(budget.admit("fs.readFile")).toBe(false);
-		expect(budget.admit("git.status")).toBe(false);
 	});
 
 	test("a replaced namespace is never charged by the old one's late settlement", async () => {

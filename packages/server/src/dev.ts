@@ -100,24 +100,11 @@ if (rawPort !== undefined && envPort === undefined) {
 		`thinkrail dev: ignoring invalid THINKRAIL_PORT=${rawPort}; using a free port from 24242`,
 	);
 }
-const posthogApiKey =
-	process.env.THINKRAIL_DEV_POSTHOG === "1" ? process.env.THINKRAIL_POSTHOG_PROJECT_KEY : undefined;
-if (posthogApiKey) {
-	console.log(
-		"thinkrail dev: THINKRAIL_DEV_POSTHOG is on, so this run sends basic analytics and survey answers",
-	);
-}
-
 const { port } = await bootHost({
 	port: envPort ?? 24242,
 	host,
 	portMode: envPort === undefined ? "free" : "exact",
 	resolveShellEnv: true,
 	...(staticDir ? { staticDir } : {}),
-	analytics: {
-		channel: "dev",
-		build: "source",
-		...(posthogApiKey ? { posthogApiKey } : {}),
-	},
 });
 console.log(`thinkrail host: http://${host}:${port}`);

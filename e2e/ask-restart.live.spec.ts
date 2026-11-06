@@ -16,8 +16,8 @@ import type { Workspace } from "@thinkrail/contracts";
 import { jbcentralExtensionPath } from "@thinkrail/shared/jbcentral";
 import { toolHomeEnv } from "@thinkrail/shared/toolHomes";
 import { stripAmbientPiCredentials } from "./ambientCredentials";
-import { E2E_BASE_CONFIG } from "./fixtures/analyticsConsent";
 import { activeWorktreeRow } from "./fixtures/app";
+import { E2E_BASE_CONFIG } from "./fixtures/baseConfig";
 import {
 	CENTRAL_STUB_READ_ONLY_ENV,
 	CentralSetupError,

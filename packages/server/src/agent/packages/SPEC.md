@@ -114,7 +114,7 @@ this module never spawns npm or git itself.
   - Error codes: `PACKAGE_SOURCE_INVALID`, `PACKAGE_OFFLINE`, `PACKAGE_UNTRUSTED`, `PACKAGE_UNKNOWN`,
     `PACKAGE_INSTALL_FAILED`, `PACKAGE_REMOVE_FAILED`, `PACKAGE_UPDATE_FAILED`,
     `PACKAGE_SETTINGS_WRITE_FAILED`; `PACKAGE_INSTALLED_UNLISTED` is the façade's (declaration persisted,
-    row not produced). Messages carry pi's text and never reach analytics.
+    row not produced).
 
 ## Deferred
 
