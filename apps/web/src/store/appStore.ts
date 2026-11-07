@@ -1031,6 +1031,7 @@ interface AppState {
 	previewTabByWorkspace: Record<string, string>;
 	navTickByWorkspace: Record<string, number>;
 	closedChatsByWorkspace: Record<string, ClosedChat[]>;
+	sessionSummariesByWorkspace: Record<string, SessionSummary[]>;
 	chatStartsByWorkspace: Record<string, number>;
 	workspaceCreations: Record<string, WorkspaceCreation>;
 	activeCreationId: string | null;
@@ -1375,6 +1376,10 @@ interface AppState {
 		title: string,
 	) => void;
 	noteClosedChats: (workspaceId: string, entries: ClosedChat[]) => void;
+	noteWorkspaceSessionSummaries: (
+		workspaceId: string,
+		summaries: readonly SessionSummary[],
+	) => void;
 	hydrateSession: (
 		summary: SessionSummary,
 		hydrated: HydratedRuntime,
@@ -2344,6 +2349,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 	previewTabByWorkspace: {},
 	navTickByWorkspace: {},
 	closedChatsByWorkspace: {},
+	sessionSummariesByWorkspace: {},
 	chatStartsByWorkspace: {},
 	workspaceCreations: {},
 	activeCreationId: null,
@@ -3449,6 +3455,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 				previewTabByWorkspace: omitKey(s.previewTabByWorkspace, workspaceId),
 				navTickByWorkspace: omitKey(s.navTickByWorkspace, workspaceId),
 				closedChatsByWorkspace: omitKey(s.closedChatsByWorkspace, workspaceId),
+				sessionSummariesByWorkspace: omitKey(s.sessionSummariesByWorkspace, workspaceId),
 				chatStartsByWorkspace: omitKey(s.chatStartsByWorkspace, workspaceId),
 				terminalsByWorkspace: omitKey(s.terminalsByWorkspace, workspaceId),
 				activeTerminalByWorkspace: omitKey(s.activeTerminalByWorkspace, workspaceId),
@@ -4177,6 +4184,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 					[workspaceId]: [...refreshed, ...incoming.values()].sort(
 						(a, b) => b.closedAt - a.closedAt,
 					),
+				},
+			};
+		}),
+	noteWorkspaceSessionSummaries: (workspaceId, summaries) =>
+		set((s) => {
+			if (s.removedWorkspaceIds[workspaceId]) return {};
+			return {
+				sessionSummariesByWorkspace: {
+					...s.sessionSummariesByWorkspace,
+					[workspaceId]: summaries
+						.filter((summary) => !isSessionDeleted(s, workspaceId, summary.sessionId))
+						.map((summary) => ({ ...summary })),
 				},
 			};
 		}),

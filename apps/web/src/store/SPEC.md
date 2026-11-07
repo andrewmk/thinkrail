@@ -398,7 +398,10 @@ re-read while a server starts. The state vocabulary and the attention/active pre
   active-workspace hydration pass snapshots **`selectWorkspaceSessionIds`** before each `session.list`; when
   that authoritative read lands, **`reconcileWorkspaceSessions`** applies the same tombstone fold to every
   baseline id absent from the host result, repairing deletion events missed while disconnected without
-  deleting a session created after the read began or advancing a user-navigation clock. Otherwise
+  deleting a session created after the read began or advancing a user-navigation clock, and
+  **`noteWorkspaceSessionSummaries`** records that same read's full summaries in
+  **`sessionSummariesByWorkspace`** (per workspace, wholesale per read, tombstoned ids dropped) — the
+  projection the mobile chat list renders. Otherwise
   **`hydrateSession`** rebuilds browser-local
   runtime/render state from a host `SessionSummary` + converted transcript on connect; placement comes only
   from this surface's local workspace view, a local create intent, or an explicit reopen—peer-created/live

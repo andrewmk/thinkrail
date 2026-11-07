@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { LayoutAttention } from "../../lib";
 import { openFileInTab } from "../../panels/openTabs";
 import { useAppStore } from "../../store";
+import { useWorkspaceChatCatalogReconciliation } from "../chatReconciliation";
 import { useLayoutIntentProcessing } from "../layoutIntents";
 import {
 	applyLayoutAttention,
@@ -9,6 +10,7 @@ import {
 	useWorkspaceLayoutState,
 } from "../layoutState";
 import { syncLegacySelectionFromAttention } from "../legacySelection";
+import { MobileChatListSheet } from "./MobileChatListSheet";
 import { MobileChatView } from "./MobileChatView";
 import { MobileFilesView } from "./MobileFilesView";
 import { MobilePlanView } from "./MobilePlanView";
@@ -21,16 +23,23 @@ import { MobileTopbar } from "./MobileTopbar";
 // intents (chat start, file links) never land in a center group.
 function ignoreFocusRequest(): void {}
 
-function MobileWorkspace({ workspaceId }: { workspaceId: string }) {
-	const [tab, setTab] = useState<MobileTab>("chat");
+function MobileWorkspace({
+	workspaceId,
+	tab,
+	onTabChange,
+}: {
+	workspaceId: string;
+	tab: MobileTab;
+	onTabChange: (tab: MobileTab) => void;
+}) {
 	const document = useAppStore((s) => s.layoutDocumentsByWorkspace[workspaceId]);
 	const routeChatTargetGeneration = useAppStore((s) => s.routeChatTargetGeneration);
 
 	useWorkspaceLayoutState(workspaceId);
 
 	useEffect(() => {
-		if (useAppStore.getState().routeChatTarget) setTab("chat");
-	}, [routeChatTargetGeneration]);
+		if (useAppStore.getState().routeChatTarget) onTabChange("chat");
+	}, [onTabChange, routeChatTargetGeneration]);
 
 	const changeAttention = useCallback(
 		(next: LayoutAttention) => {
@@ -53,13 +62,14 @@ function MobileWorkspace({ workspaceId }: { workspaceId: string }) {
 	);
 
 	useLayoutIntentProcessing(workspaceId, commit, changeAttention, ignoreFocusRequest);
+	useWorkspaceChatCatalogReconciliation(workspaceId, commit);
 
 	const openFileInFiles = useCallback(
 		(path: string) => {
 			void openFileInTab(workspaceId, path, "preview");
-			setTab("files");
+			onTabChange("files");
 		},
-		[workspaceId],
+		[onTabChange, workspaceId],
 	);
 
 	return (
@@ -71,13 +81,21 @@ function MobileWorkspace({ workspaceId }: { workspaceId: string }) {
 				{tab === "files" ? <MobileFilesView workspaceId={workspaceId} /> : null}
 				{tab === "plan" ? <MobilePlanView workspaceId={workspaceId} /> : null}
 			</main>
-			<MobileTabBar tab={tab} onChange={setTab} />
+			<MobileTabBar tab={tab} onChange={onTabChange} />
 		</div>
 	);
 }
 
 export function MobileShell() {
 	const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
+	const [tab, setTab] = useState<MobileTab>("chat");
+	const [chatsOpen, setChatsOpen] = useState(false);
+
+	// The tab state lives here so the topbar's chat list can switch back to it.
+	useEffect(() => {
+		setTab("chat");
+		setChatsOpen(false);
+	}, [activeWorkspaceId]);
 
 	return (
 		<div
@@ -85,10 +103,23 @@ export function MobileShell() {
 			data-mobile="true"
 			className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr]"
 		>
-			<MobileTopbar />
+			<MobileTopbar {...(activeWorkspaceId ? { onOpenChats: () => setChatsOpen(true) } : {})} />
 			{activeWorkspaceId ? (
-				// Remounting per workspace resets the tab to chat (chat-first entry).
-				<MobileWorkspace key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
+				<>
+					{/* Remounting per workspace resets its hooks (chat-first entry). */}
+					<MobileWorkspace
+						key={activeWorkspaceId}
+						workspaceId={activeWorkspaceId}
+						tab={tab}
+						onTabChange={setTab}
+					/>
+					<MobileChatListSheet
+						workspaceId={activeWorkspaceId}
+						open={chatsOpen}
+						onOpenChange={setChatsOpen}
+						onSwitched={() => setTab("chat")}
+					/>
+				</>
 			) : (
 				<MobileProjectHome />
 			)}

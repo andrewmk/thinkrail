@@ -1,5 +1,6 @@
+import { RiHistoryLine as History } from "@remixicon/react";
 import { useT } from "@thinkrail/locales/react";
-import { Button } from "@thinkrail/ui/button";
+import { Button, IconButton } from "@thinkrail/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@thinkrail/ui/dialog";
 import { useState } from "react";
 import { QuietScrollArea } from "../../components/QuietScrollArea";
@@ -8,7 +9,7 @@ import { selectActiveWorkspace, selectContextProject, useAppStore } from "../../
 import { BrandLogo } from "../BrandLogo";
 import { ConnectionStatusIndicator } from "../ConnectionStatus";
 
-export function MobileTopbar() {
+export function MobileTopbar({ onOpenChats }: { onOpenChats?: () => void }) {
 	const t = useT();
 	const status = useAppStore((s) => s.status);
 	const contextProject = useAppStore(selectContextProject);
@@ -47,7 +48,19 @@ export function MobileTopbar() {
 					{activeWorkspace.branch}
 				</span>
 			) : null}
-			<div className="ml-auto shrink-0">
+			<div className="ml-auto flex shrink-0 items-center gap-8">
+				{activeWorkspace && onOpenChats ? (
+					<IconButton
+						variant="ghost"
+						size="m"
+						icon={History}
+						label={t("shell.mobile.chatList")}
+						tooltip={t("shell.mobile.chatList")}
+						data-testid="mobile-chats"
+						onClick={() => onOpenChats()}
+						className="shrink-0"
+					/>
+				) : null}
 				<ConnectionStatusIndicator status={status} />
 			</div>
 			<Dialog open={locationOpen} onOpenChange={setLocationOpen}>

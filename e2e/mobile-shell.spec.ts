@@ -1,15 +1,17 @@
-import { writeFileSync } from "node:fs";
+import { realpathSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
+	defaultWorkspaceRow,
 	deviceContext,
 	MOBILE_DEVICE,
 	openAppFresh,
 	TABLET_DEVICE,
 	worktreeRows,
 } from "./fixtures/app";
-import { E2E_DATA_DIR } from "./fixtures/paths";
+import { E2E_DATA_DIR, E2E_FIXTURE_REPO } from "./fixtures/paths";
 import { pierreLines } from "./fixtures/pierre";
+import { seedWorkspaceSession } from "./fixtures/sessions";
 
 const worktree = () => join(E2E_DATA_DIR, "worktrees", "sample-project", "workspace-1");
 
@@ -47,6 +49,42 @@ async function openMobileWorkspace(page: Page): Promise<void> {
 	// The created workspace's chat opens automatically; the composer appears once it exists.
 	await expect(page.getByTestId("chat-input")).toBeVisible({ timeout: 30_000 });
 }
+
+const SEED_BASE_TS = 1_750_000_000_000;
+
+// Seeds a preexisting session into the workspace's worktree, as a chat created on
+// another surface (e.g. the desktop version) exists on disk. The host derives a
+// session's updatedAt from the file mtime, so pin it for deterministic ordering.
+function seedChat(worktreePath: string, id: string, reply: string, mtime: number): void {
+	const session = seedWorkspaceSession(worktreePath, {
+		id,
+		messages: [
+			{ role: "user", text: `seeded prompt for ${id}`, timestamp: mtime - 1_000 },
+			{ role: "assistant", text: reply, timestamp: mtime },
+		],
+	});
+	utimesSync(session.path, new Date(mtime), new Date(mtime));
+}
+
+// Opens the fixture project and enters its default workspace from the project tree.
+async function enterDefaultWorkspaceMobile(page: Page): Promise<void> {
+	await page.getByTestId("add-project-menu").click();
+	await page.getByTestId("menu-open-project").click();
+	await expect(page.getByTestId("project-item").first()).toBeVisible();
+	const row = defaultWorkspaceRow(page);
+	if ((await row.count()) === 0) {
+		await page.getByTestId("project-item").first().click();
+	}
+	await expect(row).toBeVisible({ timeout: 15_000 });
+	await row.getByRole("button").first().click();
+	await expect(page.getByTestId("mobile-tabbar")).toBeVisible();
+}
+
+const seededAssistant = (page: Page, text: string) =>
+	page
+		.locator('[data-testid="chat-message"][data-role="assistant"]')
+		.filter({ hasText: text })
+		.first();
 
 async function noHorizontalOverflow(page: Page): Promise<void> {
 	await expect
@@ -186,6 +224,74 @@ test("a coarse-pointer tablet keeps the mobile shell at wide width", async ({ br
 			await expect(page.getByTestId(id)).toHaveCount(0);
 		}
 		await noHorizontalOverflow(page);
+	} finally {
+		await context.close();
+	}
+});
+
+test("a workspace's preexisting chats load in the mobile shell", async ({ browser }) => {
+	const context = await deviceContext(browser, MOBILE_DEVICE);
+	const page = await context.newPage();
+	try {
+		// openAppFresh resets the client and host state, then the seeded session makes
+		// the default workspace hold a preexisting chat (as the desktop version would).
+		await openAppFresh(page);
+		seedChat(
+			realpathSync(E2E_FIXTURE_REPO),
+			"e2e-mobile-seeded",
+			"seeded mobile history reply",
+			SEED_BASE_TS,
+		);
+		await enterDefaultWorkspaceMobile(page);
+		await expect(seededAssistant(page, "seeded mobile history reply")).toBeVisible({
+			timeout: 30_000,
+		});
+	} finally {
+		await context.close();
+	}
+});
+
+test("the mobile chat list lists preexisting chats and switches between them", async ({
+	browser,
+}) => {
+	const context = await deviceContext(browser, MOBILE_DEVICE);
+	const page = await context.newPage();
+	try {
+		await openAppFresh(page);
+		const repo = realpathSync(E2E_FIXTURE_REPO);
+		seedChat(repo, "e2e-mobile-older", "older seeded chat reply", SEED_BASE_TS);
+		seedChat(repo, "e2e-mobile-newer", "newer seeded chat reply", SEED_BASE_TS + 50_000);
+		await enterDefaultWorkspaceMobile(page);
+		// The newest chat is auto-opened on entry, desktop-parity.
+		await expect(seededAssistant(page, "newer seeded chat reply")).toBeVisible({
+			timeout: 30_000,
+		});
+		// The list shows both chats, newest first, with the active one marked.
+		await page.getByTestId("mobile-chats").click();
+		const sheet = page.getByTestId("mobile-chats-sheet");
+		await expect(sheet).toBeVisible();
+		const rows = sheet.getByTestId("mobile-chat-row");
+		await expect(rows).toHaveCount(2);
+		await expect(rows.first()).toHaveAttribute("data-session-id", "e2e-mobile-newer");
+		await expect(rows.nth(1)).toHaveAttribute("data-session-id", "e2e-mobile-older");
+		await expect(rows.first()).toHaveAttribute("data-active", "true");
+		// Tapping a row switches to that chat and closes the sheet.
+		await rows.nth(1).click();
+		await expect(sheet).toBeHidden();
+		await expect(seededAssistant(page, "older seeded chat reply")).toBeVisible({
+			timeout: 30_000,
+		});
+		// The list marks the switched-to chat as active.
+		await page.getByTestId("mobile-chats").click();
+		await expect(sheet.getByTestId("mobile-chat-row").nth(1)).toHaveAttribute(
+			"data-active",
+			"true",
+		);
+		// The list's New chat starts a fresh chat.
+		await sheet.getByTestId("mobile-new-chat").click();
+		await expect(sheet).toBeHidden();
+		await expect(page.getByTestId("chat-input")).toBeVisible({ timeout: 30_000 });
+		await expect(seededAssistant(page, "older seeded chat reply")).toHaveCount(0);
 	} finally {
 		await context.close();
 	}

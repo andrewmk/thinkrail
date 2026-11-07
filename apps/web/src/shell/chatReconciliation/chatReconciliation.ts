@@ -252,6 +252,7 @@ export function useWorkspaceChatCatalogReconciliation(
 					baselineSessionIds,
 					summaries.map((summary) => summary.sessionId),
 				);
+				useAppStore.getState().noteWorkspaceSessionSummaries(workspaceId, summaries);
 				let latestDocument = useAppStore.getState().layoutDocumentsByWorkspace[workspaceId];
 				const authoritativeSessionIds = new Set(summaries.map((summary) => summary.sessionId));
 				const missingPlacedSessionIds = baselinePlacedSessionIds.filter(
