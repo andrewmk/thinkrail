@@ -15,6 +15,8 @@ function envPort(name: string): number | undefined {
 
 const hostPort = envPort("THINKRAIL_PORT") ?? 24242;
 const webPort = envPort("THINKRAIL_WEB_PORT");
+const host = process.env.THINKRAIL_HOST ?? "localhost";
+const proxyHost = host === "0.0.0.0" || host === "::" ? "localhost" : host;
 
 export default defineConfig(({ mode }) => {
 	const profile = mode === "profile";
@@ -27,16 +29,17 @@ export default defineConfig(({ mode }) => {
 			],
 		},
 		server: {
+			host,
 			port: webPort ?? 24269,
 			strictPort: webPort !== undefined,
 			proxy: {
 				"/ws": {
-					target: `ws://localhost:${hostPort}`,
+					target: `ws://${proxyHost}:${hostPort}`,
 					ws: true,
 				},
-				"/files": { target: `http://localhost:${hostPort}` },
-				"/blob": { target: `http://localhost:${hostPort}` },
-				"/fonts": { target: `http://localhost:${hostPort}` },
+				"/files": { target: `http://${proxyHost}:${hostPort}` },
+				"/blob": { target: `http://${proxyHost}:${hostPort}` },
+				"/fonts": { target: `http://${proxyHost}:${hostPort}` },
 			},
 		},
 		worker: { format: "es" },

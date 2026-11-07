@@ -399,7 +399,11 @@ themselves.
   origin. Under `bun run dev` that origin is Vite, and a route Vite does not proxy answers the SPA
   `index.html` with status 200 — an `<img>` shows nothing and a PDF fetch "succeeds" with HTML, while the
   host-served build and the e2e suite stay green. `vite.config.ts` therefore proxies `/files`, `/blob` and
-  `/fonts` beside `/ws`, and `devProxy.test.ts` pins the list to the composers' constants.
+  `/fonts` beside `/ws`, and `devProxy.test.ts` pins the list to the composers' constants. The dev
+  server binds the same `THINKRAIL_HOST` interface the host server does (default `localhost`), so one
+  env var exposes the app on a LAN address; the proxy targets that same address, falling back to
+  loopback only for wildcard binds (`0.0.0.0` / `::`) — a server bound to a specific IP rejects
+  loopback connections, so proxying `localhost` there would 502 while the direct build stayed green.
 - **`typecheck` runs two projects.** `tsconfig.json` checks the browser app with DOM types only;
   `tsconfig.test.json` checks tests, `scripts/`, and `vite.config.ts` with Bun types. Every
   test file is checked; the test project has no exclude list. A test never shares its base name with a
