@@ -113,4 +113,57 @@ describe("activity disclosure summaries", () => {
 		expect(expanded).toContain('data-expanded="true"');
 		expect(expanded).toContain("inspect first");
 	});
+
+	it("opens an activity group that contains thinking when the preference is on, leaving tool-only groups closed", () => {
+		const nested: ChatRow = {
+			kind: "activity",
+			id: "activity:n",
+			steps: [
+				tool("n1", "read"),
+				{
+					kind: "thinking",
+					id: "thinking-n",
+					text: "inspect the formatter first",
+					streaming: false,
+					tools: [tool("n2", "read")],
+				},
+			],
+			live: false,
+		};
+
+		const closed = renderToStaticMarkup(
+			<ChatTurnView row={nested} agentResponded={false} isFinalAnswer={false} />,
+		);
+		expect(closed).toContain('data-testid="activity-group"');
+		expect(closed).not.toContain("inspect the formatter first");
+
+		const open = renderToStaticMarkup(
+			<ChatTurnView
+				row={nested}
+				agentResponded={false}
+				isFinalAnswer={false}
+				thinkingExpandedByDefault={true}
+			/>,
+		);
+		expect(open).toContain('data-activity-node-id="activity:n"');
+		expect(open).toContain('data-testid="thinking-group-text"');
+		expect(open).toContain("inspect the formatter first");
+
+		const toolOnly: ChatRow = {
+			kind: "activity",
+			id: "activity:to",
+			steps: [tool("t1", "read"), tool("t2", "bash")],
+			live: false,
+		};
+		const toolOnlyMarkup = renderToStaticMarkup(
+			<ChatTurnView
+				row={toolOnly}
+				agentResponded={false}
+				isFinalAnswer={false}
+				thinkingExpandedByDefault={true}
+			/>,
+		);
+		expect(toolOnlyMarkup).toContain('data-testid="activity-group"');
+		expect(toolOnlyMarkup).not.toContain('data-testid="activity-step"');
+	});
 });

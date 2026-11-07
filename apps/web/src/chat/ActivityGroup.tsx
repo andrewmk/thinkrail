@@ -61,6 +61,7 @@ export function ActivityGroup({
 			testId="activity-group"
 			live={live}
 			stepCount={flatSteps.length}
+			fallback={expandedByDefault && flatSteps.some((step) => step.kind === "thinking")}
 			icon={<Layers className="size-12 shrink-0" />}
 			breadcrumbLabel={breadcrumb.label}
 			breadcrumbMeta={breadcrumb.meta}

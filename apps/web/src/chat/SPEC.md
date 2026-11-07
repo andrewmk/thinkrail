@@ -325,11 +325,14 @@ and **`useSelection`** for a single-choice group — the divider's chips, which 
 the `AskUserQuestionCard` pattern, see [[module-ext-ask-user-question]]; deliberately
 never evicted — growth is bounded by manual toggles). A manual toggle always wins — over auto-expand
 defaults *and* over a virtualization remount. The only auto-expand default is the **Always expand
-thinking** preference (Message-order projection, below): when on, thinking groups start expanded —
-live or settled — in the main transcript and the subagent transcript pane, while every other fold
-surface keeps the collapsed default. The value reaches `useFold` as its fallback through a prop from
+thinking** preference (Message-order projection, below): when on, thinking groups — and the
+activity groups that contain one — start expanded, live or settled, in the main transcript and the
+subagent transcript pane, so grouped thinking is never hidden behind its container; every other fold
+surface, including thinking-free activity groups, keeps the collapsed default. The value reaches
+`useFold` as its fallback through a prop from
 the transcript's store boundary, so presentational renderers stay props-driven, and toggling the
-preference re-folds every thinking group the reader has not manually toggled.
+preference re-folds every thinking group — and containing activity group — the reader has not
+manually toggled.
 `FoldGeometryProvider` is the transcript's explicit pre/post
 change seam: every fold header registers a stable row-derived id through `useFold`, including `Collapsible`
 and fallback-driven auto expansion/collapse. It routes detached anchor stabilization through
