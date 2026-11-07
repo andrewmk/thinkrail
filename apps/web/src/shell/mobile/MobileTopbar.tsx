@@ -1,4 +1,4 @@
-import { RiHistoryLine as History } from "@remixicon/react";
+import { RiHistoryLine as History, RiSettings3Line as Settings } from "@remixicon/react";
 import { useT } from "@thinkrail/locales/react";
 import { Button, IconButton } from "@thinkrail/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@thinkrail/ui/dialog";
@@ -62,6 +62,16 @@ export function MobileTopbar({ onOpenChats }: { onOpenChats?: () => void }) {
 					/>
 				) : null}
 				<ConnectionStatusIndicator status={status} />
+				<IconButton
+					variant="ghost"
+					size="m"
+					icon={Settings}
+					label={t("shell.topbar.settings")}
+					tooltip={t("shell.topbar.settings")}
+					data-testid="open-settings"
+					onClick={() => useAppStore.getState().openSettings()}
+					className="shrink-0"
+				/>
 			</div>
 			<Dialog open={locationOpen} onOpenChange={setLocationOpen}>
 				<DialogContent className="max-w-none p-0" data-testid="mobile-projects-sheet">
