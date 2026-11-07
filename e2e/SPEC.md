@@ -360,6 +360,19 @@ covers the no-workspace branch: the fresh start screen and Project Home carry th
 plain Projects pane header with no right/bottom rail, the rail entry / Hide / `Mod+B` toggle with their
 focus endpoints, and rail/header geometry that matches the workbench across a workspace round trip.
 
+## PWA lane
+
+The production build ships a precaching service worker (the phone PWA, registered by the app itself —
+see `module-web`). The default no-agent suite therefore blocks service workers in every context
+(`serviceWorkers: "block"` in the Playwright config): a precache answers requests before the network,
+so a `page.route` that aborts or holds a precached asset (the merge-worker, Pierre-worker, and
+chunk-failure tests) would be silently bypassed, and offline expectations would race the worker's
+activation. The PWA lane (`bun run e2e:pwa`, `playwright.pwa.config.ts` + `pwa.spec.ts`) runs the same
+host, build, and isolation contract with service workers allowed and verifies the lane's reason for
+existing: manifest link, worker registration and page control, and an offline reload that opens the
+shell with the disconnected status. It is Chromium-only and runs alongside the default gate, not as
+part of it.
+
 ## Isolation contract
 
 The no-agent setup seeds a test-owned empty `models.json` and never reads or copies developer
@@ -447,7 +460,11 @@ resolution — reads `USERPROFILE` on Windows and ignores `HOME`, so `HOME` alon
 Windows lane into the real profile (see `module-shared`). Every spawner — the Playwright web server, the
 artifact and live-restart hosts, the workflow harness, and the artifact probes — takes that home through
 `@thinkrail/shared/toolHomes`' `toolHomeEnv`, so each agent tool's config home (what account detection reads)
-lands in the sandbox and a new detection source is pinned everywhere at once.
+lands in the sandbox and a new detection source is pinned everywhere at once. The bind address is pinned the
+same way: every web-server spawner sets `THINKRAIL_HOST=localhost`, because an ambient `THINKRAIL_HOST`
+(a LAN bind inherited from a developer's running ThinkRail agent) rebinds the test host to a non-loopback
+interface and the polled loopback port answers with connection refused while the host log shows it listening
+fine on the LAN address.
 
 ## Boundary
 

@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Locator, Page } from "@playwright/test";
+import type { Browser, BrowserContext, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import type { SessionSummary, Workspace } from "@thinkrail/contracts";
 import { removeTree } from "@thinkrail/shared/removeTree";
@@ -28,6 +28,32 @@ import { fixtureRepoHealthy, seedFixtureRepo } from "./repo";
 import { E2eWire } from "./wire";
 
 export const PHONE_VIEWPORT = { width: 390, height: 780 } as const;
+
+// Coarse-pointer devices — the mobile shell's domain is `(pointer: coarse)`, any width.
+export const MOBILE_DEVICE = {
+	...PHONE_VIEWPORT,
+	isMobile: true,
+	hasTouch: true,
+} as const;
+
+export const TABLET_DEVICE = {
+	width: 1024,
+	height: 768,
+	isMobile: true,
+	hasTouch: true,
+} as const;
+
+/** A touch context (isMobile + hasTouch ⇒ `pointer: coarse`), one page per call. */
+export async function deviceContext(
+	browser: Browser,
+	device: { width: number; height: number },
+): Promise<BrowserContext> {
+	return browser.newContext({
+		viewport: { width: device.width, height: device.height },
+		isMobile: true,
+		hasTouch: true,
+	});
+}
 
 export async function pressPlatformShortcut(page: Page, key: string): Promise<void> {
 	const apple = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform ?? ""));

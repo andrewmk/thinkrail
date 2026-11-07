@@ -18,6 +18,15 @@ import { Shell } from "./shell/Shell";
 import { applyThemePreference, initializeThemes, readThemeHint } from "./themes";
 import { initTransport } from "./transport";
 
+// The desktop webview runs the shell from the app's own bundle beside its host; a precached
+// service worker there could mask an updated host after an app update, so the PWA registration
+// is browser-only. The preload-injected marker is the desktop's signal (same convention as the
+// other __THINKRAIL_*__ bridges).
+const DESKTOP_MARKER_GLOBAL = "__THINKRAIL_DESKTOP__";
+if (!Reflect.has(globalThis, DESKTOP_MARKER_GLOBAL)) {
+	void import("virtual:pwa-register").then(({ registerSW }) => registerSW({ immediate: true }));
+}
+
 initializeThemes();
 applyThemePreference(readThemeHint());
 initializeFonts();

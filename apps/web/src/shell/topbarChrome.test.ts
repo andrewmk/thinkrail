@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const shellSource = readFileSync(new URL("./Shell.tsx", import.meta.url), "utf8");
+const shellSource = readFileSync(new URL("./DesktopChrome.tsx", import.meta.url), "utf8");
 const headerStart = shellSource.indexOf("<header");
 const headerEnd = shellSource.indexOf("</header>");
 const header = shellSource.slice(headerStart, headerEnd);

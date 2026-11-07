@@ -43,7 +43,7 @@ convention; their boundary is held by convention + spec. Sibling edges live here
 | `chat` | pi conversation UI primitives: content-block renderers + the tool-renderer registry | no | [chat/SPEC.md](src/chat/SPEC.md) |
 | `prompt` | lifecycle-neutral slash completion + prompt-template slot editing | yes | [prompt/SPEC.md](src/prompt/SPEC.md) |
 | `auth` | in-app provider login: the presentational OAuth dialog + its client-side state reducer | yes | [auth/SPEC.md](src/auth/SPEC.md) |
-| `shell` | responsive composition + frontend-local workbench ownership (bounded `layout/` and `layoutState/` children) | no | [shell/SPEC.md](src/shell/SPEC.md) |
+| `shell` | responsive composition + frontend-local workbench ownership (bounded `layout/`, `layoutState/`, and `mobile/` children) | no | [shell/SPEC.md](src/shell/SPEC.md) |
 | `search` | the global search palette: query grammar, ranking + client-local learning, store-derived work items, double-Shift gesture | yes | [search/SPEC.md](src/search/SPEC.md) |
 | `commands` | the typed contract an invocable app action is described with (visibility, offline gating, display-only shortcuts) | yes | [commands/SPEC.md](src/commands/SPEC.md) |
 | `updates` | optional native/host update shell hook and props-driven controls | yes | [updates/SPEC.md](src/updates/SPEC.md) |
@@ -408,8 +408,8 @@ themselves.
   `tsconfig.test.json` checks tests, `scripts/`, and `vite.config.ts` with Bun types. Every
   test file is checked; the test project has no exclude list. A test never shares its base name with a
   sibling of the other extension (`x.test.ts` beside `x.test.tsx`): `tsc` keeps only the `.ts` one.
-
-## Later
-
-The mobile single-view shell and PWA packaging (installable, offline shell) ride on this split without
-touching panels or store.
+- **The build is a PWA.** `vite-plugin-pwa` (generateSW, autoUpdate, no auto-injected registration)
+  runs beside the app build, emitting `sw.js` and the manifest the app root links. Registration is the
+  app's own call in `main.tsx`, skipped where the desktop webview's preload marker is present — the
+  desktop ships its shell beside its host, so a precache must never mask an updated host. The
+  offline-shell behavior is recorded in [[submodule-web-shell-mobile]] (*PWA packaging*).

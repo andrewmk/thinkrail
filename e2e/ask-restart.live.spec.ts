@@ -92,6 +92,7 @@ async function startHost(): Promise<void> {
 		stdio: ["ignore", log, log],
 		env: stripAmbientPiCredentials({
 			...process.env,
+			THINKRAIL_HOST: "localhost",
 			THINKRAIL_PORT: String(PORT),
 			THINKRAIL_STATIC_DIR: staticDir,
 			THINKRAIL_DATA_DIR: DATA_DIR,

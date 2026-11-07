@@ -91,7 +91,9 @@ create the tools it needs based on how you actually work.
   reports. The server is saved to `pi`'s `models.json`, so its models appear in the chat model picker and in
   the `pi` CLI alike.
 - **Desktop app or browser.** A native desktop app, or the `thinkrail` CLI that opens the same app in your
-  browser. Both embed the same engine host; app state lives under `~/.thinkrail`.
+  browser. Both embed the same engine host; app state lives under `~/.thinkrail`. The browser app is also
+  installable on a phone — install it from the browser's menu and it opens as a chat-first standalone app
+  that still shows the connected shell offline.
 - **Your language.** Settings → Language follows your system language or a language you pick; English,
   Japanese, Russian, Simplified Chinese, and Spanish are built in. Add a language ThinkRail doesn't ship yet by
   dropping a translated `en.json` into `~/.thinkrail/locales` — it applies as you save. Agent replies and

@@ -8,7 +8,7 @@ import {
 	type Workspace,
 } from "@thinkrail/contracts";
 import { applyLocale, currentTranslator } from "@thinkrail/locales/react";
-import type { WorkspaceLayoutDocument } from "../shell/layout";
+import type { LayoutCenterTab, WorkspaceLayoutDocument } from "../shell/layout";
 import { type EditorTab, EMPTY_RUNTIME } from "./appStore";
 import {
 	fsChangedPaths,
@@ -38,6 +38,7 @@ import {
 	selectLayoutResourcePlacement,
 	selectLayoutTabPlaced,
 	selectLayoutTabPlacement,
+	selectMobileActiveChat,
 	selectProjectIsRunning,
 	selectProjectNeedsAttention,
 	selectReadyCompletionAck,
@@ -526,6 +527,91 @@ test("registered documents participate in legacy selection readiness", () => {
 	};
 	expect(selectAttentionCenterResourceReady(state, "ws")).toBe(true);
 	expect(selectAttentionCenterResourceCacheKey(state, "ws")).toBe("local-todo");
+});
+
+test("selectMobileActiveChat projects the attention group's chat", () => {
+	const chat = {
+		kind: "chat" as const,
+		id: "chat:1",
+		name: "First",
+		sessionId: "s1",
+	};
+	const file = {
+		kind: "file" as const,
+		id: "file:a",
+		name: "a",
+		path: "a",
+	};
+	const layout = (tabs: LayoutCenterTab[]): WorkspaceLayoutDocument => ({
+		version: 2,
+		center: { kind: "group", id: "center", tabs },
+		left: { visible: false, width: 0.2, groups: [] },
+		right: { visible: false, width: 0.2, groups: [] },
+		bottom: { visible: false, height: 0.3, alignment: "center", groups: [] },
+		toolRestoreTargets: {},
+	});
+	const stateFor = (tabs: LayoutCenterTab[], selected: string) => ({
+		layoutDocumentsByWorkspace: { ws: layout(tabs) },
+		layoutAttentionByWorkspace: {
+			ws: {
+				selectedByGroup: { center: selected },
+				lastFocusedCenterGroupId: "center",
+				lastFocusedSideGroupId: {},
+				navigationClockByGroup: { center: 0 },
+			},
+		},
+		tabsByWorkspace: {},
+		terminalsByWorkspace: {},
+	});
+
+	expect(
+		selectMobileActiveChat({ ...stateFor([chat], "chat:1"), layoutDocumentsByWorkspace: {} }, "ws"),
+	).toBe(null);
+
+	expect(selectMobileActiveChat(stateFor([chat], "chat:1"), "ws")?.id).toBe("chat:1");
+	expect(selectMobileActiveChat(stateFor([file, chat], "file:a"), "ws")?.id).toBe("chat:1");
+	expect(selectMobileActiveChat(stateFor([file], "file:a"), "ws")).toBe(null);
+});
+
+test("selectMobileActiveChat only reads the focused group of a split", () => {
+	const leftChat = { kind: "chat" as const, id: "chat:left", name: "L", sessionId: "sl" };
+	const rightChat = { kind: "chat" as const, id: "chat:right", name: "R", sessionId: "sr" };
+	const layout: WorkspaceLayoutDocument = {
+		version: 2,
+		center: {
+			kind: "split",
+			id: "split",
+			direction: "horizontal",
+			weights: [0.5, 0.5],
+			children: [
+				{ kind: "group", id: "left", tabs: [leftChat] },
+				{ kind: "group", id: "right", tabs: [rightChat] },
+			],
+		},
+		left: { visible: false, width: 0.2, groups: [] },
+		right: { visible: false, width: 0.2, groups: [] },
+		bottom: { visible: false, height: 0.3, alignment: "center", groups: [] },
+		toolRestoreTargets: {},
+	};
+	const state = {
+		layoutDocumentsByWorkspace: { ws: layout },
+		layoutAttentionByWorkspace: {
+			ws: {
+				selectedByGroup: { left: "chat:left", right: "chat:right" },
+				lastFocusedCenterGroupId: "left",
+				lastFocusedSideGroupId: {},
+				navigationClockByGroup: { left: 0, right: 0 },
+			},
+		},
+		tabsByWorkspace: {},
+		terminalsByWorkspace: {},
+	};
+	expect(selectMobileActiveChat(state, "ws")?.id).toBe("chat:left");
+	state.layoutAttentionByWorkspace.ws = {
+		...state.layoutAttentionByWorkspace.ws,
+		lastFocusedCenterGroupId: "right",
+	};
+	expect(selectMobileActiveChat(state, "ws")?.id).toBe("chat:right");
 });
 
 test("active workspace selectors resolve the workspace and its owning project", () => {

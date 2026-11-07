@@ -23,6 +23,7 @@ export default defineConfig({
 		timeout: 120_000,
 		env: {
 			...artifactHostEnvironment(E2E_BINARY_CACHE),
+			THINKRAIL_HOST: "localhost",
 			THINKRAIL_PORT: String(E2E_BINARY_PORT),
 		},
 	},

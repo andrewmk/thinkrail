@@ -703,6 +703,34 @@ export function selectAttentionCenterTab(
 	return find(document.center);
 }
 
+export function selectMobileActiveChat(
+	state: LayoutAttentionState,
+	workspaceId: string,
+): Extract<LayoutCenterTab, { kind: "chat" }> | null {
+	const document = state.layoutDocumentsByWorkspace[workspaceId];
+	const attention = state.layoutAttentionByWorkspace[workspaceId];
+	if (!document || !attention) return null;
+	const find = (
+		node: WorkspaceLayoutDocument["center"],
+	): {
+		selected: Extract<LayoutCenterTab, { kind: "chat" }> | null;
+		first: Extract<LayoutCenterTab, { kind: "chat" }> | null;
+	} => {
+		if (node.kind === "split") {
+			const a = find(node.children[0]);
+			const b = find(node.children[1]);
+			return { selected: a.selected ?? b.selected, first: a.first ?? b.first };
+		}
+		if (node.id !== attention.lastFocusedCenterGroupId) return { selected: null, first: null };
+		const selectedId = readLayoutSelection(attention, node.id);
+		const selected = node.tabs.find((tab) => tab.id === selectedId) ?? node.tabs[0] ?? null;
+		const first = node.tabs.find((tab) => tab.kind === "chat") ?? null;
+		return { selected: selected?.kind === "chat" ? selected : null, first };
+	};
+	const result = find(document.center);
+	return result.selected ?? result.first;
+}
+
 interface ChatAttentionState extends LayoutAttentionState {
 	activeWorkspaceId: string | null;
 	obscuredChatSessions: Record<string, true>;

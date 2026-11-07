@@ -105,7 +105,9 @@ another.
    `{ backendProfileId: "local", windowId: "main" }`. The route is appended to the fresh origin; the
    preference map is serialized as data and prepended to the preload source so the web client can hydrate
    before React mounts despite the changing port. Open one normal native `BrowserWindow` with the system
-   renderer.
+   renderer. The preload also defines the frozen non-enumerable `__THINKRAIL_DESKTOP__` marker: the web
+   app's PWA service-worker registration is browser-only, and the desktop shell — shipped beside its host
+   in the same bundle — must never be served through a precache.
 
 The runtime bundle is built with `--outdir` + `--entry-naming` (Bun refuses external maps with
 `--outfile`). `preBuild` refuses to stage web `.map` files.

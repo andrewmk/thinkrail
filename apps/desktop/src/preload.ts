@@ -78,7 +78,17 @@ window.addEventListener("keydown", (event) =>
 installPageZoomGestures(window, navigator.platform, (gesture) => {
 	electroview.rpc?.send.pageZoomGestureRequested(gesture);
 });
+// Marks this webview as the desktop shell so the app skips its PWA service-worker registration
+// (the desktop ships the shell beside its host; a precache must never mask an updated host).
+// The web app feature-detects the same string in main.tsx.
+const DESKTOP_MARKER_GLOBAL = "__THINKRAIL_DESKTOP__";
 const globals = globalThis as typeof globalThis & Record<string, unknown>;
+Object.defineProperty(globals, DESKTOP_MARKER_GLOBAL, {
+	value: true,
+	writable: false,
+	configurable: false,
+	enumerable: false,
+});
 const updateBridge: NativeUpdateBridge = Object.freeze({
 	getState: () => rpc.request.getUpdateState(),
 	checkForUpdates: () => rpc.request.checkForUpdates(),

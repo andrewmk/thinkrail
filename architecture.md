@@ -101,9 +101,10 @@ dependency. This keeps test process drivers outside both launchers and the serve
    bottom region. The frame's topology, singleton-tool placement, visibility, folds, geometry, and alignment
    remain unchanged when that window switches workspace; workspace-scoped resources and attention project
    into it from separate local views. Terminals may occupy center or auxiliary groups, with new workspaces
-   defaulting one terminal to bottom. Another window never rearranges this one. A future mobile shell may
-   project the same panels differently; desktop docking does not define that projection. Detail:
-   [[submodule-web-shell-layout]].
+   defaulting one terminal to bottom. Another window never rearranges this one. The mobile shell (coarse-pointer
+   clients) projects the same panels one screen at a time; desktop docking does not define that
+   projection. Detail: [[submodule-web-shell-layout]] (frame), [[submodule-web-shell-mobile]]
+   (projection).
 6. **Workspaces are git worktrees.** project (git repo) → workspace (`git worktree` on its own
    branch/cwd, under `~/.thinkrail/worktrees`) → {chats, files, terminals}. **Two deliberate
    exceptions, both `kind`-marked on the wire and both *user-owned* — never renamed or reclaimed by

@@ -49,7 +49,11 @@ export default defineConfig({
 	testDir: ".",
 	// The headless workflow-test suite has its own config (e2e/playwright.workflows.config.ts) — no browser,
 	// no webServer; `bun run test:workflows`. Never picked up by the browser suites.
-	testIgnore: "workflows/**",
+	testIgnore: [
+		"workflows/**",
+		// The PWA lane (playwright.pwa.config.ts) is the only lane where service workers run.
+		"pwa.spec.ts",
+	],
 	...(centralMode ? { grep: /@agent/ } : { grepInvert: /@agent/ }),
 	// One worker owns one stateful host. Shard lanes stay serial internally; fullyParallel only lets
 	// Playwright distribute individual tests (rather than uneven whole files) across separate processes.
@@ -67,6 +71,12 @@ export default defineConfig({
 	use: {
 		baseURL: `http://localhost:${PORT}`,
 		trace: "on-first-retry",
+		// The production build registers a precaching service worker (the phone PWA). Left active,
+		// it would serve precached chunks instead of hitting the network, silently defeating every
+		// page.route that aborts or holds an asset (merge-worker, Pierre-worker, chunk-failure
+		// tests). The suite tests the app, not the PWA: the PWA lane (playwright.pwa.config.ts)
+		// runs with service workers allowed.
+		serviceWorkers: "block",
 	},
 	projects: [
 		{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
@@ -85,6 +95,9 @@ export default defineConfig({
 		reuseExistingServer: false,
 		timeout: 120_000,
 		env: {
+			// The suite polls localhost; an ambient ThinkRail host process (agent runs) leaks a LAN
+			// THINKRAIL_HOST that would otherwise rebind the host away from it.
+			THINKRAIL_HOST: "localhost",
 			THINKRAIL_PORT: String(PORT),
 			THINKRAIL_STATIC_DIR: staticDir,
 			THINKRAIL_DATA_DIR: E2E_DATA_DIR,

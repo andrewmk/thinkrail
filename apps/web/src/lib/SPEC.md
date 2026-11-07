@@ -26,7 +26,10 @@ not this module; the theme-aware highlighter remains app-local.
   `ResourcePreview` because a package cannot import the app's `lib`; `panels/pathIdentity.test.ts` pins it to
   `projectRelativePath` for workspace-relative paths),
   **`viewport.ts`** → `isPhoneViewport()` plus the live `usePhoneViewport()` projection (coarse pointer
-  or a viewport below 768px is phone-class; both media queries are observed), and **`shallowEqualArrays()`** (element-wise `Object.is` — the "did this really change?" test behind the
+  or a viewport below 768px is phone-class; both media queries are observed), plus
+  **`isCoarsePointer()`** / **`useCoarsePointer()`** — touch-class device detection: the single
+  `(pointer: coarse)` query at any width, which the mobile shell ([[submodule-web-shell]]) uses to pick
+  its projection (phones and tablets, independent of window size), and **`shallowEqualArrays()`** (element-wise `Object.is` — the "did this really change?" test behind the
   store's snapshot-identity guard and `ErrorBoundary`'s reset keys), **`userText()`** (a user
   message's plain text — shared by `chat`'s transcript hydration/renderer and `store`'s live event
   fold, so "same message" means the same thing everywhere; it lives here because `store`'s edge to

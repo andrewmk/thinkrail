@@ -10,7 +10,7 @@ references: [module-desktop, module-contracts]
 
 ## Responsibility
 
-The responsive composition root: top-level app chrome, active-project/workspace routing, theme application, global shortcuts, region error isolation, and composition of layout-agnostic panels into one frontend-local desktop workbench frame. A future mobile shell may project the same panels differently; it must not inherit desktop docking accidentally.
+The responsive composition root: top-level app chrome, active-project/workspace routing, theme application, global shortcuts, region error isolation, and composition of layout-agnostic panels into one frontend-local desktop workbench frame. Coarse-pointer clients mount the mobile projection ([[submodule-web-shell-mobile]]) instead — one screen at a time, never the desktop docking.
 
 ## Boundary
 

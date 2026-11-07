@@ -101,27 +101,6 @@ function seedQuestionnaire(
 	return session;
 }
 
-function seedPanedQuestionnaire(name: string, toolCallId: string) {
-	const paned = (pageName: string) =>
-		optionsFor(pageName).map((option, index) =>
-			index === 0 ? { ...option, preview: `${pageName} alpha keeps the rollout staged.` } : option,
-		);
-	return seedQuestionnaire(name, toolCallId, {
-		questions: [
-			{
-				question: "Which first-page rollout should we use?",
-				header: "First page",
-				options: paned("First"),
-			},
-			{
-				question: "Which second-page rollout should we use?",
-				header: "Second page",
-				options: paned("Second"),
-			},
-		],
-	});
-}
-
 function seedTallQuestionnaire(name: string, toolCallId: string) {
 	return seedQuestionnaire(name, toolCallId, {
 		questions: [
@@ -458,58 +437,6 @@ test("a questionnaire with more than four questions exposes every page and submi
 		await expect(card.getByTestId("ask-submit")).toBeEnabled();
 	} finally {
 		rmSync(session.path, { force: true });
-	}
-});
-
-test("a coarse pointer reveals a returning page's text target without focusing it", async ({
-	browser,
-}) => {
-	const context = await browser.newContext({
-		hasTouch: true,
-		viewport: { width: 1280, height: 640 },
-	});
-	const page = await context.newPage();
-	await openFixtureProject(page);
-	const session = seedPanedQuestionnaire("touch questionnaire", "ask-touch-pages");
-
-	try {
-		await enterDefaultWorkspace(page);
-		await hideAuxiliaryWorkbench(page);
-		await openPersistedChatAfterInput(page, "touch questionnaire");
-
-		const chatScroll = page.getByTestId("chat-scroll");
-		const card = page.locator('[data-testid="ask-user-question"][data-tone="active"]');
-		await expect(card).toBeVisible();
-		await waitForScrollStability(chatScroll);
-		await card.getByTestId("ask-option").first().click();
-		const next = card.getByTestId("ask-continue");
-		await wheelUntilChatElementIntersects(page, chatScroll, next);
-		await next.click();
-
-		const custom = card.getByTestId("ask-custom");
-		await custom.fill("Use a custom second-stage rollout.");
-		await expect(custom).toBeFocused();
-		await card.getByTestId("ask-tab").first().click();
-		await expect(card.getByTestId("ask-question-text")).toHaveText(
-			"Which first-page rollout should we use?",
-		);
-		await wheelUntilChatElementIntersects(page, chatScroll, next);
-		await next.click();
-
-		const secondHeading = card.getByTestId("ask-question-text");
-		await expect(secondHeading).toHaveText("Which second-page rollout should we use?");
-		await expect
-			.poll(async () => ({
-				heading: (await readChatViewportIntersection(secondHeading)).intersects,
-				custom: (await readChatViewportIntersection(custom)).intersects,
-			}))
-			.toEqual({ heading: true, custom: true });
-		await expect(custom).not.toBeFocused();
-		expect(await nestedVerticalScrollSurfaces(card)).toEqual([]);
-		await expect(chatScroll).toHaveAttribute("data-follow-state", "detached");
-	} finally {
-		rmSync(session.path, { force: true });
-		await context.close();
 	}
 });
 
