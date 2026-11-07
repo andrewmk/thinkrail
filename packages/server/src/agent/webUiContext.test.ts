@@ -176,3 +176,60 @@ test("an extension error is bounded and named by its directory when the file is 
 
 	setExtUiPublisher(() => {});
 });
+
+test("extension-UI bridge: terminal escapes never cross it, on any text-carrying frame", () => {
+	const frames: ExtUiRequest[] = [];
+	setExtUiPublisher((f) => frames.push(f));
+	const ui = createWebUiContext("sess-ansi");
+
+	ui.setStatus("tps", `⚡ TPS: ${ESC}[38;2;68;221;255m52.0 tok/s${ESC}[0m`);
+	ui.notify(`done ${ESC}[1mbold${ESC}[0m`);
+	ui.setTitle(`t${ESC}[31mred`);
+	ui.setWidget("w", [`${ESC}[4munder${ESC}[0m`, "plain"]);
+	ui.confirm(`${ESC}[33mTitle${ESC}[0m`, `msg${ESC}]0;osc${ESC}\\`);
+	ui.select("pick", [`${ESC}[32ma${ESC}[0m`, "b"]);
+	ui.input("name", `${ESC}[7mflash${ESC}[0m`);
+	ui.editor("edit", `${ESC}M${ESC}(Bchars`);
+	selectForToolCall("sess-ansi", { toolCallId: "c1", toolInput: {} }, `${ESC}[1mAllow?${ESC}[0m`, [
+		`${ESC}[31mNo${ESC}[0m`,
+		"Yes",
+	]);
+
+	expect(frames[0]).toMatchObject({ kind: "setStatus", key: "tps", text: "⚡ TPS: 52.0 tok/s" });
+	expect(frames[1]).toMatchObject({ kind: "notify", message: "done bold" });
+	expect(frames[2]).toMatchObject({ kind: "setTitle", title: "tred" });
+	const widget = frames[3];
+	if (widget?.kind !== "setWidget") throw new Error("expected a setWidget frame");
+	expect(widget.content).toEqual(["under", "plain"]);
+	expect(frames[4]).toMatchObject({ kind: "confirm", title: "Title", message: "msg" });
+	expect(frames[5]).toMatchObject({ kind: "select", title: "pick", options: ["a", "b"] });
+	expect(frames[6]).toMatchObject({ kind: "input", title: "name", placeholder: "flash" });
+	expect(frames[7]).toMatchObject({ kind: "editor", title: "edit", prefill: "(Bchars" });
+	expect(frames[8]).toMatchObject({
+		kind: "select",
+		toolCallId: "c1",
+		title: "Allow?",
+		options: ["No", "Yes"],
+	});
+	for (const f of frames) expect(JSON.stringify(f)).not.toContain("\\u001b");
+
+	cancelExtUiForSession("sess-ansi");
+	setExtUiPublisher(() => {});
+});
+
+test("an extension error cause with terminal escapes is stripped before the client sees it", () => {
+	const frames: ExtUiRequest[] = [];
+	setExtUiPublisher((f) => frames.push(f));
+
+	notifyExtensionError("sess-err-ansi", {
+		extensionPath: "/home/u/.pi/agent/extensions/boom.ts",
+		event: "turn_end",
+		error: `${ESC}[31mfailed${ESC}[0m`,
+	});
+
+	const frame = frames.at(-1);
+	if (frame?.kind !== "notify") throw new Error("expected a notify frame");
+	expect(frame.message).toBe("Extension boom.ts failed on turn_end: failed");
+
+	setExtUiPublisher(() => {});
+});

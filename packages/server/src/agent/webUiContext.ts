@@ -97,24 +97,61 @@ function extensionName(extensionPath: string): string {
 	return basename(dirname(extensionPath)) || file;
 }
 
+const ESC = "\u001b";
+const BEL = "\u0007";
+
+/** SGR/CSI, OSC, and two-byte Fe/Fn terminal escapes; a web client cannot render them. */
+const ANSI_ESCAPE = new RegExp(
+	`${ESC}(?:\\[[0-?]*[ -/]*[@-~]|\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)|[@-Z\\\\-_])?`,
+	"g",
+);
+
+const terminalFree = (text: string): string => text.replace(ANSI_ESCAPE, "");
+
+function terminalFreeDialog(request: DialogRequest): DialogRequest {
+	const title = terminalFree(request.title);
+	switch (request.kind) {
+		case "select":
+			return { ...request, title, options: request.options.map(terminalFree) };
+		case "confirm":
+			return { ...request, title, message: terminalFree(request.message) };
+		case "input":
+			return {
+				...request,
+				title,
+				...(request.placeholder === undefined
+					? {}
+					: { placeholder: terminalFree(request.placeholder) }),
+			};
+		case "editor":
+			return {
+				...request,
+				title,
+				...(request.prefill === undefined ? {} : { prefill: terminalFree(request.prefill) }),
+			};
+	}
+}
+
 export function notifyExtensionError(sessionId: string, error: ExtensionError): void {
-	const cause =
-		error.error.length > MAX_EXTENSION_ERROR_CHARS
-			? `${error.error.slice(0, MAX_EXTENSION_ERROR_CHARS)}…`
-			: error.error;
+	const cause = terminalFree(error.error);
+	const text =
+		cause.length > MAX_EXTENSION_ERROR_CHARS
+			? `${cause.slice(0, MAX_EXTENSION_ERROR_CHARS)}…`
+			: cause;
 	notifyExtUi(
 		sessionId,
-		`Extension ${extensionName(error.extensionPath)} failed on ${error.event}: ${cause}`,
+		`Extension ${extensionName(error.extensionPath)} failed on ${error.event}: ${text}`,
 		"error",
 	);
 }
 
 function bridgeDialog(
 	sessionId: string,
-	request: DialogRequest,
+	rawRequest: DialogRequest,
 	opts?: ExtensionUIDialogOptions,
 ): Promise<string | boolean | null> {
 	return new Promise((resolve) => {
+		const request = terminalFreeDialog(rawRequest);
 		const { id } = request;
 		let settled = false;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -197,10 +234,16 @@ export function createWebUiContext(
 		notify(message, type) {
 			const level = type ?? "info";
 			if (intercepted(sessionId, message, level)) return;
-			publish({ id: nextId(), sessionId, kind: "notify", message, level });
+			publish({ id: nextId(), sessionId, kind: "notify", message: terminalFree(message), level });
 		},
 		setStatus(key, text) {
-			publish({ id: nextId(), sessionId, kind: "setStatus", key, text: text ?? null });
+			publish({
+				id: nextId(),
+				sessionId,
+				kind: "setStatus",
+				key,
+				text: typeof text === "string" ? terminalFree(text) : null,
+			});
 		},
 		setWidget(key, content) {
 			publish({
@@ -208,11 +251,11 @@ export function createWebUiContext(
 				sessionId,
 				kind: "setWidget",
 				key,
-				content: Array.isArray(content) ? content : null,
+				content: Array.isArray(content) ? content.map(terminalFree) : null,
 			});
 		},
 		setTitle(title) {
-			publish({ id: nextId(), sessionId, kind: "setTitle", title });
+			publish({ id: nextId(), sessionId, kind: "setTitle", title: terminalFree(title) });
 		},
 
 		onTerminalInput: () => () => {},

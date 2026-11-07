@@ -490,7 +490,12 @@ re-opened transcripts provider-valid.
     = `preferredDefaultModel`; `null` when nothing is authenticated. This is the primitive the `assist` tasks
     (plan summaries, PR drafting) run on — the only place model **dispatch** happens outside a session.
   - `webUiContext` — `createWebUiContext(sessionId, currentToolCall?)` builds the `ExtensionUIContext` pi
-    calls (dialogs round-trip to the browser, fire-and-forget methods push). A dialog names the tool call
+    calls (dialogs round-trip to the browser, fire-and-forget methods push). Extension text is
+    **terminal-free on the wire**: every string an extension hands the bridge (status text, notify
+    message, widget lines, title, dialog fields, an extension error's cause) is stripped of terminal
+    control sequences — SGR/CSI, OSC, two-byte Fe/Fn — before publication, because a web client renders
+    plain text and an extension may emit escapes on its own regardless of the plain theme (a hardcoded
+    truecolor SGR is the case that put this here). A dialog names the tool call
     it is about (`toolCallId`) so the web asks on that call's card: the manager passes pi's own
     `agent.state.pendingToolCalls` and a dialog anchors only while **exactly one** call is running (the
     common gate-before-a-tool case; parallel calls stay unanchored rather than guess), and
@@ -547,7 +552,8 @@ re-opened transcripts provider-valid.
     `colors.accent` is an RGB value) and report pi's detected light/dark appearance. No honest plain
     answer exists for any of them. They cost nothing while an extension colours *through* the theme —
     every such path returns plain text — and only bite one that reads a mode or colour and then emits ANSI
-    on its own, which is the unsanitised-bridge gap tracked outside this module. Its colour table exists
+    on its own, which the bridge's escape strip catches: no terminal control sequence crosses the bridge
+    to a client (see the `webUiContext` entry above). Its colour table exists
     **only** to satisfy the constructor signature: every method that would turn a colour into an escape is
     overridden, and the members that still answer for the terminal read the constructor's *mode* or pi's
     terminal guesses, never an escape. A pi

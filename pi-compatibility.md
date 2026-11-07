@@ -249,9 +249,12 @@ apart from the recorded selection. Run the manager's restart regressions on upgr
   `defaultModelPerProvider` is not exported, so the host mirrors it for new-chat, reviewer, and
   one-shot defaults. Remove the mirror when a public export or initial-model resolver exists; until
   then the parity test in `modelDefaults.test.ts` fails on any upstream change to the map or order.
-- **Headless theme** — [[submodule-server-agent]], `plainTextTheme`. Pi's terminal theme is not
-  initialized by SDK session creation. Remove the subclass when pi supplies a usable non-TUI theme
-  contract; run `webUiContext.test.ts` against the whole inherited surface.
+- **Headless theme** — [[submodule-server-agent]], `plainTextTheme` plus the companion escape strip on
+  the extension-UI bridge. Pi's terminal theme is not initialized by SDK session creation, and an
+  extension may emit terminal escapes on its own regardless of the theme; the bridge strips them from
+  every extension-provided string because a web client can never render them. Remove the subclass when
+  pi supplies a usable non-TUI theme contract; run `webUiContext.test.ts` against the whole inherited
+  surface.
 - **Trust discovery and exclusion reloads** — [[submodule-server-agent]], `projectTrust.ts` and
   `extensions.ts`. Resource-kind discovery mirrors pi's private trust-requiring paths, while the
   excluding loader preserves reloadable extension paths and builtin exclusions. Prefer a public
