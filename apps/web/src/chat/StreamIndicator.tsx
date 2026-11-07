@@ -46,7 +46,14 @@ export function phaseLabel(t: Translator, { phase, toolName }: StreamStatus): st
 	}
 }
 
-export function StreamIndicator({ status }: { status: StreamStatus }) {
+export function StreamIndicator({
+	status,
+	workingMessage,
+}: {
+	status: StreamStatus;
+	/** Extension-supplied working line (pi's `setWorkingMessage`); replaces the phase label. */
+	workingMessage: string | null;
+}) {
 	const t = useT();
 	return (
 		<div
@@ -59,16 +66,18 @@ export function StreamIndicator({ status }: { status: StreamStatus }) {
 			<span aria-hidden="true" className="flex shrink-0">
 				<RunningIcon className="size-16 text-primary" />
 			</span>
-			<span className="min-w-0 truncate">{phaseLabel(t, status)}</span>
+			<span className="min-w-0 truncate">{workingMessage ?? phaseLabel(t, status)}</span>
 		</div>
 	);
 }
 
 export function StreamStatusSlot({
 	status,
+	workingMessage = null,
 	measureClassName = "mx-auto max-w-3xl",
 }: {
 	status: StreamStatus | null;
+	workingMessage?: string | null;
 	measureClassName?: string;
 }) {
 	return (
@@ -78,7 +87,7 @@ export function StreamStatusSlot({
 			aria-hidden={status === null ? true : undefined}
 			className={`${measureClassName} h-40 overflow-hidden px-chat-gutter`}
 		>
-			{status ? <StreamIndicator status={status} /> : null}
+			{status ? <StreamIndicator status={status} workingMessage={workingMessage} /> : null}
 		</div>
 	);
 }

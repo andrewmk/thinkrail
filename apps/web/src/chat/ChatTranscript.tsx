@@ -65,6 +65,7 @@ const chatLocationRevealClaims = new WeakMap<object, object>();
 type ChatListContext = {
 	messageOrder: ChatMessageOrder;
 	status: StreamStatus | null;
+	workingMessage: string | null;
 	runwayActive: boolean;
 	measureClassName: string;
 	headerRef: RefCallback<HTMLDivElement>;
@@ -82,7 +83,8 @@ function transcriptMeasureClassName(bounded: boolean): string {
 }
 
 function StreamHeader({ context }: { context: ChatListContext }) {
-	const { headerRef, measureClassName, messageOrder, runwayActive, status } = context;
+	const { headerRef, measureClassName, messageOrder, runwayActive, status, workingMessage } =
+		context;
 	const inset =
 		messageOrder === "oldest-first" || runwayActive ? (
 			<div className="h-[clamp(48px,10cqh,80px)]" aria-hidden />
@@ -91,15 +93,26 @@ function StreamHeader({ context }: { context: ChatListContext }) {
 		<div ref={headerRef}>
 			{inset}
 			{messageOrder === "newest-first" ? (
-				<StreamStatusSlot status={status} measureClassName={measureClassName} />
+				<StreamStatusSlot
+					status={status}
+					workingMessage={workingMessage}
+					measureClassName={measureClassName}
+				/>
 			) : null}
 		</div>
 	);
 }
 
 function StreamFooter({ context }: { context: ChatListContext }) {
-	const { measureClassName, messageOrder, runwayActive, runwayRef, status, streamEdgeRef } =
-		context;
+	const {
+		measureClassName,
+		messageOrder,
+		runwayActive,
+		runwayRef,
+		status,
+		streamEdgeRef,
+		workingMessage,
+	} = context;
 	if (messageOrder === "newest-first") {
 		return (
 			<div
@@ -113,7 +126,11 @@ function StreamFooter({ context }: { context: ChatListContext }) {
 	}
 	return (
 		<>
-			<StreamStatusSlot status={status} measureClassName={measureClassName} />
+			<StreamStatusSlot
+				status={status}
+				workingMessage={workingMessage}
+				measureClassName={measureClassName}
+			/>
 			{runwayActive ? (
 				<div ref={streamEdgeRef} data-testid="chat-stream-edge" className="h-0" />
 			) : null}
@@ -227,6 +244,7 @@ const ChatTranscript = forwardRef<
 				turnIdByMessageIndex: rt.turnIdByMessageIndex,
 				syncedConnectionGeneration: rt.syncedConnectionGeneration,
 				eventRevision: rt.eventRevision,
+				extUiWorkingMessage: rt.extUiWorkingMessage,
 			};
 		}),
 	);
@@ -398,6 +416,7 @@ const ChatTranscript = forwardRef<
 		() => ({
 			messageOrder: chatMessageOrder,
 			status: currentStreamStatus,
+			workingMessage: runtime.extUiWorkingMessage,
 			runwayActive,
 			measureClassName,
 			headerRef,
@@ -407,6 +426,7 @@ const ChatTranscript = forwardRef<
 		[
 			chatMessageOrder,
 			currentStreamStatus,
+			runtime.extUiWorkingMessage,
 			headerRef,
 			measureClassName,
 			runwayActive,

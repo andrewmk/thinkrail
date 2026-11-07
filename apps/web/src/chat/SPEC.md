@@ -474,7 +474,8 @@ both message orders. *Rejected:* keeping the modal for non-MCP extensions — ev
 - **Transcript/shell split** — `ChatView` (the exported integration component) splits into a churn-isolated
   `ChatTranscript` child that owns the per-delta transcript rendering — subscribing (via `useShallow`) to the
   streaming runtime fields it renders from (turns, toolResults, currentAssistantId, toolResponses,
-  turnIdByMessageIndex, isStreaming, settlementTick, hostState, syncedConnectionGeneration, eventRevision) —
+  turnIdByMessageIndex, isStreaming, settlementTick, hostState, syncedConnectionGeneration, eventRevision,
+  extUiWorkingMessage) —
   and owns the scroll container and
   rows — plus a chrome shell that reads only granular rarely-changing fields, so text/thinking/tool deltas
   no longer re-render header/composer/queue/dialogs; completion-ack, location-reveal, and the ask-focus
@@ -1681,7 +1682,9 @@ ever flagged). The session remains live across attempt-level `agent_end` events.
 is a **single footer** (`StreamIndicator`: the shared `RunningIcon` brand badge, decorative here, + a phase
 label from the pure `streamStatus` deriver — `working` → `thinking` → `running-tool` → `writing`, plus `compacting` while the transcript's
 trailing turn is a running compaction) — not a per-turn cursor — so it can't
-duplicate and it fills the post-send gap. Outside the streaming window (a manual compact, or the
+duplicate and it fills the post-send gap. An extension working line (pi's `setWorkingMessage`, e.g. a
+prefill progress bar) replaces the phase label while set — the indicator is the web's working line, so an
+extension that owns it in the TUI owns it here; `null` restores the label. Outside the streaming window (a manual compact, or the
 pre-prompt compaction pi runs inside `prompt()` before `agent_start`) the footer is absent by design —
 the running `CompactionNotice` row itself carries the spinner, so the beat is never dead air. The trailing Activity fold's live ticker is a *status* line (spinner,
 like a running card header), not a second loader. `data-testid="stream-indicator"` + `data-phase` make

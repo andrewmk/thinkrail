@@ -259,7 +259,14 @@ export function createWebUiContext(
 		},
 
 		onTerminalInput: () => () => {},
-		setWorkingMessage: () => {},
+		setWorkingMessage(message) {
+			publish({
+				id: nextId(),
+				sessionId,
+				kind: "setWorking",
+				message: message === undefined ? null : terminalFree(message),
+			});
+		},
 		setWorkingVisible: () => {},
 		setWorkingIndicator: () => {},
 		setHiddenThinkingLabel: () => {},

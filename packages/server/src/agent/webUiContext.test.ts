@@ -217,6 +217,22 @@ test("extension-UI bridge: terminal escapes never cross it, on any text-carrying
 	setExtUiPublisher(() => {});
 });
 
+test("extension-UI bridge: setWorkingMessage publishes the working line; no argument restores the default", () => {
+	const frames: ExtUiRequest[] = [];
+	setExtUiPublisher((f) => frames.push(f));
+	const ui = createWebUiContext("sess-working");
+
+	ui.setWorkingMessage(`prefill ${ESC}[32m43%${ESC}[0m`);
+	ui.setWorkingMessage();
+	ui.setWorkingMessage("again");
+
+	expect(frames[0]).toMatchObject({ kind: "setWorking", message: "prefill 43%" });
+	expect(frames[1]).toMatchObject({ kind: "setWorking", message: null });
+	expect(frames[2]).toMatchObject({ kind: "setWorking", message: "again" });
+
+	setExtUiPublisher(() => {});
+});
+
 test("an extension error cause with terminal escapes is stripped before the client sees it", () => {
 	const frames: ExtUiRequest[] = [];
 	setExtUiPublisher((f) => frames.push(f));

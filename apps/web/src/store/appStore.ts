@@ -507,6 +507,7 @@ export interface SessionRuntime {
 	extUiQueue: ExtUiDialogRequest[];
 	extUiStatus: Record<string, string>;
 	extUiWidget: Record<string, string[]>;
+	extUiWorkingMessage: string | null;
 	notice: ProviderWarning | null;
 	hostState: SessionState | null;
 }
@@ -539,6 +540,7 @@ function newRuntime(
 		extUiQueue: [],
 		extUiStatus: {},
 		extUiWidget: {},
+		extUiWorkingMessage: null,
 		notice: null,
 		hostState: null,
 	};
@@ -942,6 +944,8 @@ function reduceExtUi(
 				return { ...rt, extUiWidget: omitKey(rt.extUiWidget, request.key) };
 			return { ...rt, extUiWidget: { ...rt.extUiWidget, [request.key]: request.content } };
 		}
+		case "setWorking":
+			return { ...rt, extUiWorkingMessage: request.message };
 		case "notice":
 			return rt.notice === request.notice ? rt : { ...rt, notice: request.notice };
 		default:
@@ -2088,6 +2092,7 @@ const REPLAYABLE_EXT_UI: ReadonlySet<ExtUiRequest["kind"]> = new Set([
 	"notify",
 	"setStatus",
 	"setWidget",
+	"setWorking",
 	"setTitle",
 	"notice",
 ]);

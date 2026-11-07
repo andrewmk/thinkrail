@@ -239,7 +239,9 @@ the palette ranks with — kept here so host-side search can rank with the same 
     it into the session, and an older host simply omits it (the client shows its generic label).
   - the **extension-UI frames** **`ExtUiRequest`** / **`ExtUiResponse`** — our wire shape for pi's in-process
     `uiContext` calls (`select`/`confirm`/`input`/`editor` round-trip; `notify`/`setStatus`/`setWidget`/
-    `setTitle`/`dismiss` are fire-and-forget), carried on the `pi.extensionUi` channel. One member is
+    `setWorking`/`setTitle`/`dismiss` are fire-and-forget), carried on the `pi.extensionUi` channel.
+    `setWorking` carries pi's `setWorkingMessage` — an extension-owned working line (a prefill progress
+    bar) — as `message`, `null` restoring the client's own label; an older client ignores the unknown kind. One member is
     host-authored, not pi's: `notice` (v99) carries a closed `ProviderWarning` code for a session, such
     as the Anthropic extra-usage warning. It has no text, so the client localizes it, and older clients
     ignore the unknown kind. A round-trip

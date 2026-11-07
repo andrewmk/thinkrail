@@ -1582,6 +1582,27 @@ test("an ext-UI frame that beats its session.create response is replayed, not dr
 	expect(useAppStore.getState().extUiOrphans).toEqual([]);
 });
 
+test("a working-line frame sets the session's extension working message and null restores it", () => {
+	const store = useAppStore.getState();
+	store.openChatSession("ws1", "w1", null, "medium");
+	expect(rt("w1").extUiWorkingMessage).toBeNull();
+
+	store.applyExtUi({ id: "wk1", sessionId: "w1", kind: "setWorking", message: "prefill 43%" });
+	expect(rt("w1").extUiWorkingMessage).toBe("prefill 43%");
+
+	store.applyExtUi({ id: "wk2", sessionId: "w1", kind: "setWorking", message: null });
+	expect(rt("w1").extUiWorkingMessage).toBeNull();
+});
+
+test("a working-line frame that beats its session.create response is replayed, not dropped", () => {
+	const store = useAppStore.getState();
+	store.applyExtUi({ id: "wk3", sessionId: "w2", kind: "setWorking", message: "prefill 12%" });
+	expect(useAppStore.getState().sessions.w2).toBeUndefined();
+
+	store.openChatSession("ws1", "w2", null, "medium");
+	expect(rt("w2").extUiWorkingMessage).toBe("prefill 12%");
+});
+
 test("an extra-usage notice survives the create race, dismisses per chat, and silences every chat", () => {
 	const store = useAppStore.getState();
 	store.applyExtUi({ id: "x1", sessionId: "a", kind: "notice", notice: "anthropicExtraUsage" });

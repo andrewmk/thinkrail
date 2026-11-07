@@ -535,9 +535,13 @@ re-opened transcripts provider-valid.
     TUI `Component` factory a web host cannot render (`setFooter`, `setHeader`, `setEditorComponent`,
     `custom`, `setWidget`'s factory overload; the string-array overload **is** rendered).
     *Translatable* ones must behave: **`theme` is a real `Theme`** (`plainTextTheme`) whose every
-    decorator returns its input unchanged. *Translatable but unimplemented* is the third group and is named
+    decorator returns its input unchanged, and **`setWorkingMessage`** publishes the extension's working
+    line (a prefill progress bar) as a `setWorking` frame — no argument → `null`, restoring the client's
+    default label. *Translatable but unimplemented* is the third group and is named
     here so the split does not read as exhaustive: `setEditorText` / `pasteToEditor` are forwarded to the
-    host by pi's own rpc mode and a web composer could honour them; ours stay inert until something needs
+    host by pi's own rpc mode and a web composer could honour them; `setWorkingVisible` /
+    `setWorkingIndicator` / `setHiddenThinkingLabel` steer the TUI loader's visibility, spinner frames, and
+    hidden-thinking label — chrome the web indicator owns itself; ours stay inert until something needs
     them. What separates the theme from that group is the cost of being inert — an unimplemented editor
     call loses one feature, an unimplemented theme kills the whole extension on its first line. `getAllThemes: []` / `getTheme: undefined` match pi's own
     rpc mode; `setTheme`'s `{success:true}` is a known lie, tracked separately — a web host has no TUI

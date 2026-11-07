@@ -103,6 +103,22 @@ test("the status slot keeps one fixed shell while idle content stays inaccessibl
 	expect(active).toContain('data-testid="stream-indicator"');
 });
 
+test("the extension's working line replaces the phase label while it is set", () => {
+	const withMessage = renderToStaticMarkup(
+		createElement(StreamStatusSlot, {
+			status: { phase: "working" },
+			workingMessage: "prefill [████░░░░░░] 43% 4.4k/10.2k gen in ~3s",
+		}),
+	);
+	expect(withMessage).toContain("prefill [████░░░░░░] 43%");
+	expect(withMessage).not.toContain("Working…");
+
+	const restored = renderToStaticMarkup(
+		createElement(StreamStatusSlot, { status: { phase: "working" }, workingMessage: null }),
+	);
+	expect(restored).toContain("Working…");
+});
+
 test("phaseLabel names every phase (and falls back to a generic tool label)", () => {
 	const t = currentTranslator();
 	expect(phaseLabel(t, { phase: "working" })).toBe("Working…");
