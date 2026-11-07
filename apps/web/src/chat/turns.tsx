@@ -64,6 +64,7 @@ function ChatTurnViewImpl({
 	onReveal,
 	onTryAgain,
 	stillRunning,
+	thinkingExpandedByDefault,
 }: {
 	row: ChatRow;
 	workspaceRoot?: string | undefined;
@@ -77,6 +78,7 @@ function ChatTurnViewImpl({
 	onTryAgain?: (() => void) | undefined;
 	/** Live-resource deep link for this chat's latest turn divider only. */
 	stillRunning?: StillRunning | undefined;
+	thinkingExpandedByDefault?: boolean | undefined;
 }) {
 	switch (row.kind) {
 		case "user":
@@ -158,6 +160,7 @@ function ChatTurnViewImpl({
 					live={row.live}
 					workspaceRoot={workspaceRoot}
 					onOpenFile={onOpenFile}
+					expandedByDefault={thinkingExpandedByDefault}
 				/>
 			);
 		case "divider":

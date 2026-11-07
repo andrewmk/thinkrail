@@ -324,7 +324,13 @@ and **`useSelection`** for a single-choice group — the divider's chips, which 
 `${rowId}:artifacts` rather than a boolean per side, so "only one list open" cannot be violated;
 the `AskUserQuestionCard` pattern, see [[module-ext-ask-user-question]]; deliberately
 never evicted — growth is bounded by manual toggles). A manual toggle always wins — over auto-expand
-defaults *and* over a virtualization remount. `FoldGeometryProvider` is the transcript's explicit pre/post
+defaults *and* over a virtualization remount. The only auto-expand default is the **Always expand
+thinking** preference (Message-order projection, below): when on, thinking groups start expanded —
+live or settled — in the main transcript and the subagent transcript pane, while every other fold
+surface keeps the collapsed default. The value reaches `useFold` as its fallback through a prop from
+the transcript's store boundary, so presentational renderers stay props-driven, and toggling the
+preference re-folds every thinking group the reader has not manually toggled.
+`FoldGeometryProvider` is the transcript's explicit pre/post
 change seam: every fold header registers a stable row-derived id through `useFold`, including `Collapsible`
 and fallback-driven auto expansion/collapse. It routes detached anchor stabilization through
 `ReadingBandController`'s single motion channel and refreshes from the changing row's measured geometry.
@@ -358,7 +364,10 @@ newest-first cannot change another browser, device, host, or native window. The 
 adapter/subscription path (Trigger is where the response edge triggers a step; Settle is where each step
 places it): both values use 5-point steps, Settle is 25–90, Trigger is 35–100, the gap is at
 least 10 points, and the default is `{ settle: 75, trigger: 100 }`. Invalid storage falls back atomically to
-the default pair. It likewise never enters `AppConfig` or crosses the wire.
+the default pair. It likewise never enters `AppConfig` or crosses the wire. The same seam owns the
+**Always expand thinking** boolean (default off) behind the Chat settings switch: the host-qualified
+key, cross-tab sync, and stable-adapter path are identical, and it likewise never enters `AppConfig`
+or crosses the wire.
 
 **Sticky activity breadcrumb.** While the transcript's top visible content remains inside expanded
 Activity → Thinking → tool disclosures whose original headers have scrolled above the viewport, one

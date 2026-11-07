@@ -79,4 +79,38 @@ describe("activity disclosure summaries", () => {
 		);
 		expect(liveMarkup).toContain('data-activity-node-label="4 steps"');
 	});
+
+	it("expands a lone thinking group when the preference is on and stays collapsed otherwise", () => {
+		const row: ChatRow = {
+			kind: "activity",
+			id: "activity:b",
+			steps: [
+				{
+					kind: "thinking",
+					id: "thinking-b",
+					text: "inspect first",
+					streaming: false,
+					tools: [],
+				},
+			],
+			live: false,
+		};
+
+		const collapsed = renderToStaticMarkup(
+			<ChatTurnView row={row} agentResponded={false} isFinalAnswer={false} />,
+		);
+		expect(collapsed).toContain('data-testid="thinking-group"');
+		expect(collapsed).not.toContain("inspect first");
+
+		const expanded = renderToStaticMarkup(
+			<ChatTurnView
+				row={row}
+				agentResponded={false}
+				isFinalAnswer={false}
+				thinkingExpandedByDefault={true}
+			/>,
+		);
+		expect(expanded).toContain('data-expanded="true"');
+		expect(expanded).toContain("inspect first");
+	});
 });

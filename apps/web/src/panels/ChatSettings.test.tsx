@@ -31,3 +31,12 @@ test("Chat settings hides subagents against a host without the subagent protocol
 	const markup = renderToStaticMarkup(<ChatSettings />);
 	expect(markup).not.toContain('data-testid="settings-subagents"');
 });
+
+test("Chat settings renders the always-expand-thinking switch off by default", () => {
+	const markup = renderToStaticMarkup(<ChatSettings />);
+	expect(markup).toContain('data-testid="chat-thinking-expanded-row"');
+	expect(markup).toContain("Always expand thinking");
+	expect(markup).toContain(
+		'role="switch" aria-checked="false" aria-label="Always expand thinking" data-testid="chat-thinking-expanded"',
+	);
+});

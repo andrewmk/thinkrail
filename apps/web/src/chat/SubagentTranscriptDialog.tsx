@@ -85,6 +85,7 @@ function useSubagentTranscript({ workspaceId, parentSessionId, childSessionId }:
 
 export function SubagentTranscriptPane(scope: TranscriptScope) {
 	const t = useT();
+	const thinkingExpandedByDefault = useAppStore((state) => state.chatThinkingExpanded);
 	const { messages, live, error, rows, messageActions, interactionContext } =
 		useSubagentTranscript(scope);
 	return (
@@ -112,6 +113,7 @@ export function SubagentTranscriptPane(scope: TranscriptScope) {
 									row={row}
 									agentResponded={messageActions.agentRespondedByUserId.get(row.id) ?? false}
 									isFinalAnswer={messageActions.finalAnswerRowIds.has(row.id)}
+									thinkingExpandedByDefault={thinkingExpandedByDefault}
 								/>
 							</div>
 						))

@@ -1744,6 +1744,8 @@
 	"settings.chat.order.newestFirst": "Newest first",
 	"settings.chat.order.oldestFirst": "Oldest first",
 	"settings.chat.subagentLimitFailed": "Couldn't change the subagent limit",
+	"settings.chat.thinkingExpanded": "Always expand thinking",
+	"settings.chat.thinkingExpandedDescription": "Thinking blocks open by default, including while the agent is thinking. You can still collapse any block for the session.",
 	"settings.chat.workspaceSubagentLimitFailed": "Couldn't change the subagent limit for this workspace",
 	"settings.chat.workspaceSubagentsFailed": "Couldn't change subagents for this workspace",
 	"settings.customEndpoints.add": "Add server",

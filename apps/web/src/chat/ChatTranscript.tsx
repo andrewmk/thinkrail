@@ -260,6 +260,7 @@ const ChatTranscript = forwardRef<
 	});
 	const chatLineWidthBounded = useAppStore((state) => state.chatLineWidthBounded);
 	const chatMessageOrder = useAppStore((state) => state.chatMessageOrder);
+	const chatThinkingExpanded = useAppStore((state) => state.chatThinkingExpanded);
 	const streamingResponseMovement = useAppStore((state) => state.streamingResponseMovement);
 	const specNodes = useAppStore((s) => s.specsByWorkspace[workspaceId]);
 	const isSpec = useMemo(() => specPathMatcher(specNodes ?? []), [specNodes]);
@@ -710,6 +711,7 @@ const ChatTranscript = forwardRef<
 													onReviewTurn={onReviewTurn}
 													onTryAgain={onTryAgain}
 													stillRunning={row.id === latestDividerRowId ? stillRunning : undefined}
+													thinkingExpandedByDefault={chatThinkingExpanded}
 												/>
 												{chatMessageOrder === "newest-first" &&
 												runwayActive &&

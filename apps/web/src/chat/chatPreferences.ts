@@ -16,6 +16,8 @@ export type ChatMessageOrder = (typeof CHAT_MESSAGE_ORDERS)[number];
 export const DEFAULT_CHAT_MESSAGE_ORDER: ChatMessageOrder = "oldest-first";
 export const CHAT_MESSAGE_ORDER_PREFERENCE_KEY = "chat-message-order";
 export const STREAMING_RESPONSE_MOVEMENT_PREFERENCE_KEY = "streaming-response-movement";
+export const CHAT_THINKING_EXPANDED_PREFERENCE_KEY = "chat-thinking-expanded";
+export const DEFAULT_CHAT_THINKING_EXPANDED = false;
 export const STREAMING_RESPONSE_MOVEMENT_LIMITS = {
 	settleMin: 25,
 	settleMax: 90,
@@ -40,8 +42,16 @@ export function streamingResponseMovementStorageKey(httpBase: string): string {
 	return `${STORAGE_PREFIX}streaming-response-movement:${httpBase}`;
 }
 
+export function chatThinkingExpandedStorageKey(httpBase: string): string {
+	return `${STORAGE_PREFIX}chat-thinking-expanded:${httpBase}`;
+}
+
 export function parseChatMessageOrder(value: unknown): ChatMessageOrder {
 	return isChatMessageOrder(value) ? value : DEFAULT_CHAT_MESSAGE_ORDER;
+}
+
+export function parseChatThinkingExpanded(value: unknown): boolean {
+	return value === "true";
 }
 
 function isFivePointStep(value: number): boolean {
@@ -144,6 +154,15 @@ function readBrowserStreamingResponseMovement(
 	}
 }
 
+function readBrowserChatThinkingExpanded(storage: Storage | null, key: string): boolean {
+	if (!storage) return DEFAULT_CHAT_THINKING_EXPANDED;
+	try {
+		return parseChatThinkingExpanded(storage.getItem(key));
+	} catch {
+		return DEFAULT_CHAT_THINKING_EXPANDED;
+	}
+}
+
 function readStableMessageOrder(adapter: StablePreferenceAdapter): ChatMessageOrder {
 	try {
 		return parseChatMessageOrder(adapter.getItem(CHAT_MESSAGE_ORDER_PREFERENCE_KEY));
@@ -161,6 +180,14 @@ function readStableStreamingResponseMovement(
 		);
 	} catch {
 		return defaultStreamingResponseMovement();
+	}
+}
+
+function readStableChatThinkingExpanded(adapter: StablePreferenceAdapter): boolean {
+	try {
+		return parseChatThinkingExpanded(adapter.getItem(CHAT_THINKING_EXPANDED_PREFERENCE_KEY));
+	} catch {
+		return DEFAULT_CHAT_THINKING_EXPANDED;
 	}
 }
 
@@ -187,6 +214,18 @@ function writeBrowserStreamingResponseMovement(
 	} catch {}
 }
 
+function writeBrowserChatThinkingExpanded(
+	storage: Storage | null,
+	key: string,
+	expanded: boolean,
+): void {
+	if (!storage) return;
+	try {
+		if (expanded) storage.setItem(key, "true");
+		else storage.removeItem(key);
+	} catch {}
+}
+
 function writeStableMessageOrder(adapter: StablePreferenceAdapter, order: ChatMessageOrder): void {
 	try {
 		if (order === DEFAULT_CHAT_MESSAGE_ORDER) {
@@ -207,6 +246,16 @@ function writeStableStreamingResponseMovement(
 		} else {
 			adapter.setItem(STREAMING_RESPONSE_MOVEMENT_PREFERENCE_KEY, JSON.stringify(movement));
 		}
+	} catch {}
+}
+
+function writeStableChatThinkingExpanded(
+	adapter: StablePreferenceAdapter,
+	expanded: boolean,
+): void {
+	try {
+		if (expanded) adapter.setItem(CHAT_THINKING_EXPANDED_PREFERENCE_KEY, "true");
+		else adapter.removeItem(CHAT_THINKING_EXPANDED_PREFERENCE_KEY);
 	} catch {}
 }
 
@@ -240,12 +289,29 @@ export function streamingResponseMovementFromStorageEvent(
 		: parseStoredStreamingResponseMovement(event.newValue);
 }
 
+export function chatThinkingExpandedFromStorageEvent(
+	event: Pick<StorageEvent, "key" | "newValue" | "storageArea">,
+	storage: Storage | null,
+	key: string,
+): boolean | undefined {
+	if (
+		(event.key !== null && event.key !== key) ||
+		(event.storageArea !== null && event.storageArea !== storage)
+	) {
+		return undefined;
+	}
+	return event.key === null
+		? DEFAULT_CHAT_THINKING_EXPANDED
+		: parseChatThinkingExpanded(event.newValue);
+}
+
 export function initChatPreferencesPersistence(
 	stablePreferences: StablePreferenceAdapter | null = getStablePreferenceAdapter(),
 ): () => void {
 	const httpBase = stablePreferences ? "" : getTransport().httpBase();
 	const messageOrderKey = stablePreferences ? "" : chatMessageOrderStorageKey(httpBase);
 	const movementKey = stablePreferences ? "" : streamingResponseMovementStorageKey(httpBase);
+	const thinkingKey = stablePreferences ? "" : chatThinkingExpandedStorageKey(httpBase);
 	let storage: Storage | null = null;
 	if (!stablePreferences) {
 		try {
@@ -259,9 +325,13 @@ export function initChatPreferencesPersistence(
 	const initialMovement = stablePreferences
 		? readStableStreamingResponseMovement(stablePreferences)
 		: readBrowserStreamingResponseMovement(storage, movementKey);
-	useAppStore.getState().setChatPreferences(initialOrder, initialMovement);
+	const initialThinkingExpanded = stablePreferences
+		? readStableChatThinkingExpanded(stablePreferences)
+		: readBrowserChatThinkingExpanded(storage, thinkingKey);
+	useAppStore.getState().setChatPreferences(initialOrder, initialMovement, initialThinkingExpanded);
 	let previousOrder = initialOrder;
 	let previousMovement = initialMovement;
+	let previousThinkingExpanded = initialThinkingExpanded;
 	const unsubscribe = useAppStore.subscribe((state) => {
 		if (state.chatMessageOrder !== previousOrder) {
 			previousOrder = state.chatMessageOrder;
@@ -276,17 +346,28 @@ export function initChatPreferencesPersistence(
 				writeBrowserStreamingResponseMovement(storage, movementKey, previousMovement);
 			}
 		}
+		if (state.chatThinkingExpanded !== previousThinkingExpanded) {
+			previousThinkingExpanded = state.chatThinkingExpanded;
+			if (stablePreferences) {
+				writeStableChatThinkingExpanded(stablePreferences, previousThinkingExpanded);
+			} else {
+				writeBrowserChatThinkingExpanded(storage, thinkingKey, previousThinkingExpanded);
+			}
+		}
 	});
 	const onStorage = (event: StorageEvent) => {
 		const order = chatMessageOrderFromStorageEvent(event, storage, messageOrderKey);
 		const movement = streamingResponseMovementFromStorageEvent(event, storage, movementKey);
-		if (order === undefined && movement === undefined) return;
+		const thinkingExpanded = chatThinkingExpandedFromStorageEvent(event, storage, thinkingKey);
+		if (order === undefined && movement === undefined && thinkingExpanded === undefined) return;
 		const current = useAppStore.getState();
 		const nextOrder = order ?? current.chatMessageOrder;
 		const nextMovement = movement ?? current.streamingResponseMovement;
+		const nextThinkingExpanded = thinkingExpanded ?? current.chatThinkingExpanded;
 		previousOrder = nextOrder;
 		previousMovement = nextMovement;
-		current.setChatPreferences(nextOrder, nextMovement);
+		previousThinkingExpanded = nextThinkingExpanded;
+		current.setChatPreferences(nextOrder, nextMovement, nextThinkingExpanded);
 	};
 	if (!stablePreferences) window.addEventListener("storage", onStorage);
 	return () => {

@@ -132,6 +132,29 @@ describe("ThinkingGroup", () => {
 		expect(markup).not.toContain("This is ordinary reasoning.");
 	});
 
+	test("opens by default when expandedByDefault is set, including while live", () => {
+		const tools = [tool("t1", "read")];
+		const markup = renderToStaticMarkup(
+			<ThinkingGroup
+				id="a1:thinking:5"
+				thought={{
+					kind: "thinking",
+					id: "a1:thinking:5",
+					text: "I should inspect the files first.",
+					streaming: true,
+					tools,
+				}}
+				tools={tools}
+				live={true}
+				expandedByDefault={true}
+			/>,
+		);
+
+		expect(markup).toContain('data-expanded="true"');
+		expect(markup).toContain('data-testid="thinking-group-text"');
+		expect(markup).toContain("I should inspect the files first.");
+	});
+
 	test("rejects triple-emphasis runs instead of exposing leftover Markdown", () => {
 		for (const [id, text] of [
 			["stars", "***Evaluating formatter output***"],

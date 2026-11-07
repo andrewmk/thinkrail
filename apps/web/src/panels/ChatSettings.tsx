@@ -1,6 +1,7 @@
 import type { ComposerGrowthLimit, SubagentOverride } from "@thinkrail/contracts";
 import type { MessageKey } from "@thinkrail/locales";
 import { T, useT } from "@thinkrail/locales/react";
+import { Switch } from "@thinkrail/ui/switch";
 import { cn } from "@thinkrail/ui/utils";
 import {
 	type ChatMessageOrder,
@@ -138,7 +139,9 @@ export function ChatSettings() {
 	const subagentsEnabled = useAppStore((state) => state.subagentsEnabled);
 	const subagentMaxConcurrent = useAppStore((state) => state.subagentMaxConcurrent);
 	const activeWorkspace = useAppStore(selectActiveWorkspace);
+	const chatThinkingExpanded = useAppStore((state) => state.chatThinkingExpanded);
 	const setChatMessageOrder = useAppStore((state) => state.setChatMessageOrder);
+	const setChatThinkingExpanded = useAppStore((state) => state.setChatThinkingExpanded);
 	const setStreamingResponseMovement = useAppStore((state) => state.setStreamingResponseMovement);
 
 	const selectMessageOrder = (chatMessageOrder: ChatMessageOrder) => {
@@ -188,6 +191,19 @@ export function ChatSettings() {
 							testId="chat-message-order-control"
 						/>
 					}
+				/>
+				<SettingsRow
+					label={t("settings.chat.thinkingExpanded")}
+					description={t("settings.chat.thinkingExpandedDescription")}
+					control={
+						<Switch
+							checked={chatThinkingExpanded}
+							label={t("settings.chat.thinkingExpanded")}
+							testId="chat-thinking-expanded"
+							onCheckedChange={(checked) => setChatThinkingExpanded(checked)}
+						/>
+					}
+					testId="chat-thinking-expanded-row"
 				/>
 				<SettingsRow
 					label={t("settings.chat.composerSize")}

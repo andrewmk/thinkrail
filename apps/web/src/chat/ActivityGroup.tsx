@@ -24,12 +24,14 @@ export function ActivityGroup({
 	live,
 	workspaceRoot,
 	onOpenFile,
+	expandedByDefault,
 }: {
 	id: string;
 	steps: ActivityStep[];
 	live: boolean;
 	workspaceRoot?: string | undefined;
 	onOpenFile?: ((path: string) => void) | undefined;
+	expandedByDefault?: boolean | undefined;
 }) {
 	const t = useT();
 	const flatSteps = flattenActivitySteps(steps);
@@ -43,6 +45,7 @@ export function ActivityGroup({
 				live={live}
 				workspaceRoot={workspaceRoot}
 				onOpenFile={onOpenFile}
+				expandedByDefault={expandedByDefault}
 			/>
 		) : (
 			<RoutineToolRow step={single} workspaceRoot={workspaceRoot} onOpenFile={onOpenFile} />
@@ -82,6 +85,7 @@ export function ActivityGroup({
 						live={false}
 						workspaceRoot={workspaceRoot}
 						onOpenFile={onOpenFile}
+						expandedByDefault={expandedByDefault}
 					/>
 				) : (
 					<RoutineToolRow
@@ -105,6 +109,7 @@ export function ThinkingGroup({
 	live,
 	workspaceRoot,
 	onOpenFile,
+	expandedByDefault,
 }: {
 	id: string;
 	parentId?: string;
@@ -113,6 +118,7 @@ export function ThinkingGroup({
 	live: boolean;
 	workspaceRoot?: string | undefined;
 	onOpenFile?: ((path: string) => void) | undefined;
+	expandedByDefault?: boolean | undefined;
 }) {
 	const t = useT();
 	const summary =
@@ -132,6 +138,7 @@ export function ThinkingGroup({
 			icon={<Brain className="size-12 shrink-0" />}
 			label={t("chat.activity.thinking")}
 			headline={extractThinkingHeading(thought.text)}
+			fallback={expandedByDefault}
 			breadcrumbLabel={t("chat.activity.thinking")}
 			breadcrumbMeta={summary}
 			summary={summary}
@@ -173,6 +180,7 @@ function GroupDisclosure({
 	icon,
 	label,
 	headline,
+	fallback,
 	breadcrumbLabel,
 	breadcrumbMeta,
 	summary,
@@ -188,13 +196,14 @@ function GroupDisclosure({
 	icon: React.ReactNode;
 	label?: string;
 	headline?: string | undefined;
+	fallback?: boolean | undefined;
 	breadcrumbLabel: string;
 	breadcrumbMeta: string;
 	summary: string;
 	awaiting: React.ReactNode;
 	children: React.ReactNode;
 }) {
-	const [expanded, toggle, toggleRef] = useFold(id);
+	const [expanded, toggle, toggleRef] = useFold(id, fallback ?? false);
 	return (
 		<div
 			data-testid={testId}

@@ -938,13 +938,16 @@ a project picker, the prompt hero, and the reused
   `settings.changed` replaces a stale draft; mutations converge only on that broadcast and rejected calls
   toast without changing geometry); **`ChatSettings`** (one **Appearance and behavior** group of rows —
   **Message order** segmented over `store.chatMessageOrder` (Oldest first, the compatibility default /
-  Newest first, the opt-in), **Composer size** segmented over the composer-growth limit (Compact / Roomy /
-  Half chat), the chat `LineWidthControl`, and the **Streaming response movement** row, a two-handle range
+  Newest first, the opt-in), **Always expand thinking** switch over `store.chatThinkingExpanded` (off by
+  default — its fold effect is [[submodule-web-chat]]'s thinking-group auto-expand rule), **Composer size**
+  segmented over the composer-growth limit (Compact / Roomy / Half chat), the chat `LineWidthControl`, and
+  the **Streaming response movement** row, a two-handle range
   over `store.streamingResponseMovement`. The movement row's
   copy is “When the chat moves while an answer grows, and where its newest edge lands”; one axis runs
   Top → Message box, Settle is 25–90, Trigger is 35–100, both step by 5 with a 10-point minimum gap, and
-  the displayed default is 75%→100%. It exposes no runway/tail/lifecycle controls. Message order and
-  movement both apply immediately and persist only in this client through the chat preference seam:
+  the displayed default is 75%→100%. It exposes no runway/tail/lifecycle controls. Message order,
+  thinking expansion, and movement all apply immediately and persist only in this client through the
+  chat preference seam:
   browsers use current-host-qualified keys, while a native shell may inject its stable
   backend-profile/window adapter. Another browser, native window, or host is unaffected. Composer growth
   remains a top-level `AppConfig` field and converges on `settings.changed`, with a toast on rejection.

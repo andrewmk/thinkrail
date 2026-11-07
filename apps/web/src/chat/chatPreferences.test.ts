@@ -3,13 +3,18 @@ import { STORAGE_PREFIX } from "../constants/branding";
 import { useAppStore } from "../store";
 import {
 	CHAT_MESSAGE_ORDER_PREFERENCE_KEY,
+	CHAT_THINKING_EXPANDED_PREFERENCE_KEY,
 	chatMessageOrderFromStorageEvent,
 	chatMessageOrderStorageKey,
+	chatThinkingExpandedFromStorageEvent,
+	chatThinkingExpandedStorageKey,
 	DEFAULT_CHAT_MESSAGE_ORDER,
+	DEFAULT_CHAT_THINKING_EXPANDED,
 	initChatPreferencesPersistence,
 	isChatMessageOrder,
 	moveStreamingResponseHandle,
 	parseChatMessageOrder,
+	parseChatThinkingExpanded,
 	parseStreamingResponseMovement,
 	STREAMING_RESPONSE_MOVEMENT_PREFERENCE_KEY,
 	type StablePreferenceAdapter,
@@ -123,6 +128,85 @@ describe("streaming response movement preference", () => {
 			dispose();
 			useAppStore.getState().setChatMessageOrder(DEFAULT_CHAT_MESSAGE_ORDER);
 			useAppStore.getState().setStreamingResponseMovement({ settle: 75, trigger: 100 });
+		}
+	});
+});
+
+describe("chat thinking-expanded preference", () => {
+	test("collapsed is the default for missing and invalid values", () => {
+		expect(DEFAULT_CHAT_THINKING_EXPANDED).toBe(false);
+		expect(parseChatThinkingExpanded(null)).toBe(false);
+		expect(parseChatThinkingExpanded("yes")).toBe(false);
+		expect(parseChatThinkingExpanded("true")).toBe(true);
+	});
+
+	test("storage keys isolate the preference by host endpoint", () => {
+		expect(chatThinkingExpandedStorageKey("http://localhost:31415")).toBe(
+			`${STORAGE_PREFIX}chat-thinking-expanded:http://localhost:31415`,
+		);
+		expect(chatThinkingExpandedStorageKey("http://localhost:31415")).not.toBe(
+			chatThinkingExpandedStorageKey("https://remote.example"),
+		);
+	});
+
+	test("storage events synchronize the host-qualified preference", () => {
+		const storage = {} as Storage;
+		const key = chatThinkingExpandedStorageKey("http://localhost:31415");
+		expect(
+			chatThinkingExpandedFromStorageEvent(
+				{ key, newValue: "true", storageArea: storage },
+				storage,
+				key,
+			),
+		).toBe(true);
+		expect(
+			chatThinkingExpandedFromStorageEvent(
+				{ key, newValue: null, storageArea: storage },
+				storage,
+				key,
+			),
+		).toBe(false);
+		expect(
+			chatThinkingExpandedFromStorageEvent(
+				{ key: null, newValue: null, storageArea: storage },
+				storage,
+				key,
+			),
+		).toBe(false);
+		expect(
+			chatThinkingExpandedFromStorageEvent(
+				{ key: `${key}:other`, newValue: "true", storageArea: storage },
+				storage,
+				key,
+			),
+		).toBeUndefined();
+		expect(
+			chatThinkingExpandedFromStorageEvent(
+				{ key, newValue: "true", storageArea: {} as Storage },
+				storage,
+				key,
+			),
+		).toBeUndefined();
+	});
+
+	test("the preference seam hydrates and persists the setting alongside its siblings", () => {
+		const writes: Array<[string, string]> = [];
+		const removals: string[] = [];
+		const adapter: StablePreferenceAdapter = {
+			getItem: (key) => (key === CHAT_THINKING_EXPANDED_PREFERENCE_KEY ? "true" : null),
+			setItem: (key, value) => writes.push([key, value]),
+			removeItem: (key) => removals.push(key),
+		};
+		const dispose = initChatPreferencesPersistence(adapter);
+		try {
+			expect(useAppStore.getState().chatThinkingExpanded).toBe(true);
+			useAppStore.getState().setChatThinkingExpanded(false);
+			expect(removals).toContain(CHAT_THINKING_EXPANDED_PREFERENCE_KEY);
+			useAppStore.getState().setChatThinkingExpanded(true);
+			expect(writes).toContainEqual([CHAT_THINKING_EXPANDED_PREFERENCE_KEY, "true"]);
+		} finally {
+			dispose();
+			useAppStore.getState().setChatThinkingExpanded(false);
 		}
 	});
 });
