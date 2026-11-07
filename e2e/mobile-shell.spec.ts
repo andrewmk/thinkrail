@@ -142,6 +142,35 @@ test("the mobile location sheet shows the project tree and returns to the shell"
 	}
 });
 
+test("the mobile topbar opens Settings like the desktop gear and closes back to the chat", async ({
+	browser,
+}) => {
+	const context = await deviceContext(browser, MOBILE_DEVICE);
+	const page = await context.newPage();
+	try {
+		await openMobileWorkspace(page);
+		const gear = page.getByTestId("open-settings");
+		await expect(gear).toBeVisible();
+		await gear.click();
+		const dialog = page.getByTestId("settings-dialog");
+		await expect(dialog).toBeVisible();
+		// The dialog lists the same sections as desktop — the nav is a horizontal
+		// strip at phone width, so a later section needs a scroll to reach.
+		await expect(page.getByTestId("settings-nav-providers")).toBeVisible();
+		await page.getByTestId("settings-nav-appearance").click();
+		await expect(page.getByTestId("settings-nav-appearance")).toHaveAttribute(
+			"data-active",
+			"true",
+		);
+		await page.keyboard.press("Escape");
+		await expect(dialog).toBeHidden();
+		await expect(page.getByTestId("chat-input")).toBeVisible();
+		await noHorizontalOverflow(page);
+	} finally {
+		await context.close();
+	}
+});
+
 test("a mobile file tap opens the read-only Pierre view and back returns to the tree", async ({
 	browser,
 }) => {

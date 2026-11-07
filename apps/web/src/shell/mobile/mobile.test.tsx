@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { currentTranslator } from "@thinkrail/locales/react";
+import { TooltipProvider } from "@thinkrail/ui/tooltip";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MobileTabBar } from "./MobileTabBar";
 import { MobileTopbar } from "./MobileTopbar";
@@ -23,10 +24,16 @@ test("the mobile tab bar renders chat, files, and plan tabs with the active tab 
 });
 
 test("the mobile topbar renders brand, status, and no location chips without a context project", () => {
-	const markup = renderToStaticMarkup(<MobileTopbar />);
+	const markup = renderToStaticMarkup(
+		<TooltipProvider>
+			<MobileTopbar />
+		</TooltipProvider>,
+	);
 	expect(markup).toContain('data-testid="mobile-topbar"');
 	expect(markup).toContain('data-testid="brand-logo"');
 	expect(markup).toContain('data-testid="connection-status"');
+	// The Settings gear is always visible — even without a project it opens the shared dialog.
+	expect(markup).toContain('data-testid="open-settings"');
 	expect(markup).not.toContain('data-testid="mobile-project-chip"');
 	expect(markup).not.toContain('data-testid="mobile-workspace-chip"');
 	expect(markup).not.toContain('data-testid="mobile-branch"');
