@@ -52,7 +52,14 @@ else is reused, not re-derived:
   An incoming exact-chat route (`routeChatTarget`) forces the Chat tab. Project and workspace
   selection lives in one full-screen `ProjectTree` sheet opened from the topbar chips; the chat
   list is a second full-screen sheet from the topbar history button; the branch name shows as a
-  read-only chip (no review/PR affordances on mobile).
+  read-only chip (no review/PR affordances on mobile). The topbar's **Settings gear** (rightmost in
+  the trailing cluster, after the connection status — the desktop gear's same `open-settings`
+  testid and `shell.topbar.settings` copy, reused rather than re-keyed) opens the shared
+  `SettingsDialog` through the store's `openSettings()`, which the dialog's existing responsive
+  layout below `md` (horizontal nav strip) already renders on the phone; the gear is always visible
+  because the topbar renders in the workspace view, on Project Home, and while onboarding is active.
+  The desktop and mobile projections are mutually exclusive in the DOM, so the shared testid means
+  "open Settings" on both surfaces.
 - **No workspace** (or a workspace-creation in flight, or onboarding) renders `MobileProjectHome`:
   `WorkspaceCreationView` → `WelcomePanel` → `ProjectTree`, in that precedence — the desktop
   `ProjectHome` rail/resize layout is not projected.
@@ -87,7 +94,8 @@ lane that allows them.
   (`FilesPanel`, `ProjectTree`, `WelcomePanel`, `WorkspaceCreation`, `openTabs`, `openChat`).
 - Does not import: the desktop workbench internals directly (it consumes `resourceBodies`),
   `DesktopChrome`, or anything under `shell/layout` other than types and `layoutTabName`.
-- Text goes through `@thinkrail/locales` (`shell.mobile.*`); icons are `@remixicon/react` Line/Fill
-  pairs matching the desktop tab vocabulary (chat / file / task).
+- Text goes through `@thinkrail/locales` (`shell.mobile.*`; the topbar gear reuses the desktop
+  `shell.topbar.settings` key rather than duplicating the string); icons are `@remixicon/react`
+  Line/Fill pairs matching the desktop tab vocabulary (chat / file / task).
 - The root carries `data-testid="shell"` (both projections) plus `data-mobile="true"`; the desktop
   projection does not set `data-mobile`.
