@@ -323,11 +323,37 @@ export function isShellInert(value: string): boolean {
 }
 
 export async function copyText(text: string): Promise<boolean> {
+	const clipboard = navigator.clipboard;
+	if (clipboard) {
+		try {
+			await clipboard.writeText(text);
+			return true;
+		} catch {
+			// rejected: fall through to the legacy path, which still runs inside the gesture.
+		}
+	}
 	try {
-		await navigator.clipboard.writeText(text);
-		return true;
+		return legacyCopy(text);
 	} catch {
 		return false;
+	}
+}
+
+// Requires the caller's user gesture: outside one, execCommand("copy") silently fails.
+function legacyCopy(text: string): boolean {
+	const host = document.createElement("textarea");
+	host.value = text;
+	host.readOnly = true;
+	host.style.position = "absolute";
+	host.style.left = "-9999px";
+	host.style.fontSize = "12pt";
+	document.body.appendChild(host);
+	host.select();
+	host.setSelectionRange(0, host.value.length);
+	try {
+		return document.execCommand("copy");
+	} finally {
+		document.body.removeChild(host);
 	}
 }
 

@@ -49,9 +49,15 @@ not this module; the theme-aware highlighter remains app-local.
   tests never inherit a host runtime's synthetic `navigator` accidentally; the label optionally renders the
   Alt variant — `⌥⌘N` / `Ctrl+Alt+N` — so shortcut chrome never composes modifier glyphs itself), and
   **`copyText()`**
-  (clipboard write reporting whether it landed — one place for the *degradation*: an insecure context
-  (plain-http remote access) or a denied permission has no clipboard, and every caller's answer is the same
-  — do nothing loud, the text stays visible/selectable), **`randomId()`** (16 random bytes through
+  (clipboard write reporting whether it landed — the app's one clipboard-write path: the async Clipboard API
+  first, then a legacy `execCommand("copy")` fallback through a transient off-screen textarea when the API is
+  missing or the write rejects — `navigator.clipboard` is `[SecureContext]`-gated, so an insecure context
+  (plain-http remote access) has no clipboard object at all; `execCommand` is deprecated but universally
+  supported and is the only write that reaches a non-secure context, and it lands only inside the caller's
+  user gesture; when both paths fail every caller's answer is the same — do nothing loud, the text stays
+  visible/selectable. An earlier version documented the insecure context as a no-clipboard dead end; that
+  premise was false and the silent no-op made the message copy button look dead to LAN-HTTP users —
+  user-settled, 2026-11: copy must land over plain-http too), **`randomId()`** (16 random bytes through
   `getRandomValues`, which remains available to a plain-HTTP remote client) and **`randomUuid()`** (the same
   source shaped as an RFC 4122 v4 UUID, for wire ids the host validates as UUIDs; `crypto.randomUUID` is
   missing on such a client),

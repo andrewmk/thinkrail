@@ -103,11 +103,14 @@ test("a copy-code sign-in shows its required prompt right away and completes", {
 test("when the clipboard is unavailable, Copy link reveals a selected manual-copy field", {
 	tag: "@dev-seam",
 }, async ({ page }) => {
+	// Both clipboard paths must fail for the manual field to appear: the async API is denied and
+	// the legacy execCommand fallback is removed (a context where no write can land at all).
 	await page.addInitScript(() => {
 		Object.defineProperty(navigator, "clipboard", {
 			configurable: true,
 			value: { writeText: () => Promise.reject(new Error("denied")) },
 		});
+		document.execCommand = () => false;
 	});
 	const dialog = await startLogin(page, "subscription");
 

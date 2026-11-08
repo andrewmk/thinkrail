@@ -3,6 +3,7 @@ import { currentTranslator } from "@thinkrail/locales/react";
 import {
 	ancestorPaths,
 	compactAge,
+	copyText,
 	cssColorToHex,
 	DOUBLE_CLICK_SETTLE_MS,
 	doubleClickPendingMs,
@@ -308,3 +309,136 @@ test("randomUuid is a v4 UUID built without crypto.randomUUID", () => {
 		Object.defineProperty(crypto, "randomUUID", { value: original, configurable: true });
 	}
 });
+
+type LegacyHost = {
+	value: string;
+	readOnly: boolean;
+	style: Record<string, string>;
+	select(): void;
+	setSelectionRange(start: number, end: number): void;
+};
+
+function fakeLegacyDocument(execCommand: (copiedText: string) => boolean | Error) {
+	const events: string[] = [];
+	let copiedText = "";
+	const body = {
+		children: [] as unknown[],
+		appendChild(el: unknown): void {
+			this.children.push(el);
+			events.push("append");
+		},
+		removeChild(el: unknown): void {
+			this.children = this.children.filter((child) => child !== el);
+			events.push("remove");
+		},
+	};
+	const document = {
+		body,
+		createElement(): LegacyHost {
+			return {
+				value: "",
+				readOnly: false,
+				style: {},
+				select: () => events.push("select"),
+				setSelectionRange: (start, end) => events.push(`selectRange:${start}:${end}`),
+			};
+		},
+		execCommand(command: string): boolean {
+			events.push(`execCommand:${command}`);
+			const host = body.children.at(-1) as LegacyHost | undefined;
+			copiedText = host?.value ?? "";
+			const result = execCommand(copiedText);
+			if (result instanceof Error) throw result;
+			return result;
+		},
+	};
+	return {
+		document,
+		events,
+		get copiedText() {
+			return copiedText;
+		},
+	};
+}
+
+function stubBrowserGlobals(navigator: unknown, document: unknown, run: () => Promise<void>) {
+	const savedNavigator = (globalThis as Record<string, unknown>).navigator;
+	const savedDocument = (globalThis as Record<string, unknown>).document;
+	return Promise.resolve()
+		.then(() => {
+			(globalThis as Record<string, unknown>).navigator = navigator;
+			(globalThis as Record<string, unknown>).document = document;
+			return run();
+		})
+		.finally(() => {
+			(globalThis as Record<string, unknown>).navigator = savedNavigator;
+			(globalThis as Record<string, unknown>).document = savedDocument;
+		});
+}
+
+test("copyText uses the async clipboard API when it is available", () => {
+	const { document, events } = fakeLegacyDocument(() => true);
+	let written = "";
+	return stubBrowserGlobals(
+		{
+			clipboard: {
+				writeText: async (text: string) => {
+					written = text;
+				},
+			},
+		},
+		document,
+		async () => {
+			const ok = await copyText("hello clipboard");
+			expect(ok).toBe(true);
+			expect(written).toBe("hello clipboard");
+			expect(events).toEqual([]);
+		},
+	);
+});
+
+test("copyText falls back to execCommand when the clipboard API is absent (insecure context)", () => {
+	const fake = fakeLegacyDocument((text) => text === "lan text");
+	return stubBrowserGlobals({}, fake.document, async () => {
+		const ok = await copyText("lan text");
+		expect(ok).toBe(true);
+		expect(fake.events).toEqual([
+			"append",
+			"select",
+			"selectRange:0:8",
+			"execCommand:copy",
+			"remove",
+		]);
+		expect(fake.copiedText).toBe("lan text");
+	});
+});
+
+test("copyText falls back to execCommand when writeText rejects", () =>
+	stubBrowserGlobals(
+		{
+			clipboard: {
+				writeText: async () => {
+					throw new Error("NotAllowedError");
+				},
+			},
+		},
+		fakeLegacyDocument(() => true).document,
+		async () => {
+			expect(await copyText("denied text")).toBe(true);
+		},
+	));
+
+test("copyText reports false when neither path lands", () =>
+	stubBrowserGlobals(
+		{
+			clipboard: {
+				writeText: async () => {
+					throw new Error("NotAllowedError");
+				},
+			},
+		},
+		fakeLegacyDocument(() => false).document,
+		async () => {
+			expect(await copyText("nowhere")).toBe(false);
+		},
+	));

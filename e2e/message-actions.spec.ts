@@ -313,3 +313,51 @@ test("copy actions copy the full source of both user and agent messages", async 
 		);
 	}).toPass();
 });
+
+test("copy actions still land when the clipboard API is absent (insecure context)", async ({
+	page,
+}) => {
+	// Emulates plain-HTTP remote access: the async Clipboard API is gone (shadowed before the
+	// app loads), so only the legacy execCommand path can land the copy. The real clipboard is
+	// kept on `window` so the test can still read what landed.
+	await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+	await page.addInitScript(() => {
+		const real = navigator.clipboard;
+		Object.defineProperty(window, "__e2eRealClipboard", { value: real, configurable: true });
+		Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+	});
+	await openFixtureProject(page);
+	seedWorkspaceSession(realpathSync(E2E_FIXTURE_REPO), {
+		name: "copy chat insecure",
+		messages: [
+			{ role: "user", text: LARGE_TEXT, timestamp: BASE_TS },
+			{
+				role: "assistant",
+				text: "Here is the **plan** with `code`.",
+				timestamp: BASE_TS + 1_000,
+			},
+		],
+	});
+
+	await expect(defaultWorkspaceRow(page)).toBeVisible();
+	await enterDefaultWorkspace(page);
+	await expect(page.locator('[data-testid="editor-tab"][data-kind="chat"]')).toHaveCount(1);
+	expect(await page.evaluate(() => navigator.clipboard)).toBeUndefined();
+
+	const readRealClipboard = () =>
+		page.evaluate(async () =>
+			(window as unknown as { __e2eRealClipboard: Clipboard }).__e2eRealClipboard.readText(),
+		);
+
+	const userMessage = page.locator('[data-testid="chat-message"][data-role="user"]');
+	await userMessage.hover();
+	await userMessage.getByTestId("chat-copy").click();
+	await expect(userMessage.getByTestId("chat-copy")).toHaveAttribute("data-copied", "true");
+	expect(await readRealClipboard()).toBe(LARGE_TEXT);
+
+	const assistantMessage = page.locator('[data-testid="chat-message"][data-role="assistant"]');
+	await assistantMessage.hover();
+	await assistantMessage.getByTestId("chat-copy").click();
+	await expect(assistantMessage.getByTestId("chat-copy")).toHaveAttribute("data-copied", "true");
+	expect(await readRealClipboard()).toBe("Here is the **plan** with `code`.");
+});
