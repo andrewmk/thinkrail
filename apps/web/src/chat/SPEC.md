@@ -924,11 +924,15 @@ both message orders. *Rejected:* keeping the modal for non-MCP extensions — ev
   and `LEVEL_HINT` is a partial record of qualitative copy a level may simply lack. Rows follow the
   **live catalog** — `ChatView` resolves the session's model through `store`'s `selectCatalogModel`
   before passing it down, so a `model.refresh` that changes what a model supports changes the offered
-  levels with it), `SessionStatsBar`, `ChatHeader` (the fixed, single-line **panel-header row** —
+  levels with it), `SessionStatsBar`, `ChatHeader` (the fixed **panel-header row** —
   `h-panel-header-row` (`--panel-header-row-height`, currently 28px), the shared structural geometry with
   workbench Group Headers and the Changes toolbar, not a value pinned here; it never scrolls,
   and constrained widths clip/truncate TODO + status/usage text while preserving the trailing Skills
-  action. Its **Skills** button is the presentational **`SkillsButton`**
+  action. On a coarse pointer it projects as **always two rows** — status + session stats in the first,
+  the right-aligned Resources/Skills actions in the second — because host-injected status text (a pi
+  extension's tokens/sec display) overflows the phone-width single row and truncates the stats; the row
+  count stays fixed (never conditional) so the header height does not shift as the injected display
+  appears and disappears between responses. Its **Skills** button is the presentational **`SkillsButton`**
   primitive — a `BookOpen` pill, badged when a skill dir changed on disk — also shared with
   `NewWorkspaceDialog` so the two triggers cannot drift), and **`SkillsDialog`** (the **Skills manager**: a catalog
   grouped by source with **sticky section headers** — the first-party **ThinkRail** and **Pi** groups lead
