@@ -111,6 +111,11 @@ test("a coarse-pointer phone lands in the mobile shell with chat, tabs, and no d
 		await expect(page.getByTestId("mobile-tab-files")).toBeVisible();
 		await expect(page.getByTestId("mobile-tab-plan")).toBeVisible();
 		await expect(page.getByTestId("chat-send")).toBeVisible();
+		// The chat header is two 28px rows on a coarse pointer: status/stats on top, the
+		// Resources/Skills actions on the second row (desktop keeps one row).
+		const toolbar = page.getByTestId("chat-toolbar");
+		await expect(toolbar).toHaveCSS("height", "56px");
+		await expect(toolbar.locator("> div").nth(1).getByTestId("open-skills")).toBeVisible();
 		for (const id of ["left-stack", "right-stack", "bottom-panel", "center-tabs"]) {
 			await expect(page.getByTestId(id)).toHaveCount(0);
 		}
